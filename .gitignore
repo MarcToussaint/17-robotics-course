@@ -19,11 +19,11 @@ callgrind.out.*
 %% IDE temporaries
 *.kdev4
 vc60.idb
-.*.config
-.*.creator
-.*.creator.user*
-.*.files
-.*.includes
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
 
 .cproject
 .project

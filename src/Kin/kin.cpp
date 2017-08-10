@@ -667,16 +667,27 @@ void mlr::Joint::applyTransformation(mlr::Transformation& f, const arr& q){
     } break;
 
     case JT_quatBall:{
-      mlr::Quaternion r;
-      r.set(q.p+qIndex);
-      r.normalize();
-      f.addRelativeRotation(r);
+      mlr::Quaternion rot;
+      rot.set(q.p+qIndex);
+      {
+          double n=rot.normalization();
+          if(n<.5 || n>2.) LOG(-1) <<"quat normalization is extreme: " <<n <<endl;
+      }
+      rot.normalize();
+      rot.isZero=false;
+      f.addRelativeRotation(rot);
     } break;
 
     case JT_free:{
       mlr::Transformation t;
       t.pos.set(q.p+qIndex);
       t.rot.set(q.p+qIndex+3);
+      {
+          double n=t.rot.normalization();
+          if(n<.5 || n>2.) LOG(-1) <<"quat normalization is extreme: " <<n <<endl;
+      }
+      t.rot.normalize();
+      t.rot.isZero=false;
       f.appendTransformation(t);
     } break;
 
@@ -922,25 +933,23 @@ void mlr::KinematicWorld::jointSort(){
     on the edges, this calculates the absolute frames of all other nodes (propagating forward
     through trees and testing consistency of loops). */
 void mlr::KinematicWorld::calc_fwdPropagateFrames() {
-  for(Body *b: bodies) {
-    for(Joint *j:b->outLinks){ //this has no bailout for loopy graphs!
-      j->X = b->X;
-      j->X.appendTransformation(j->A);
-      if(j->type==JT_hingeX || j->type==JT_transX)  j->axis = j->X.rot.getX();
-      if(j->type==JT_hingeY || j->type==JT_transY)  j->axis = j->X.rot.getY();
-      if(j->type==JT_hingeZ || j->type==JT_transZ)  j->axis = j->X.rot.getZ();
-      if(j->type==JT_transXYPhi)  j->axis = j->X.rot.getZ();
-      if(j->type==JT_phiTransXY)  j->axis = j->X.rot.getZ();
+  for(Joint *j:joints){
+    j->X = j->from->X;
+    j->X.appendTransformation(j->A);
+    if(j->type==JT_hingeX || j->type==JT_transX)  j->axis = j->X.rot.getX();
+    if(j->type==JT_hingeY || j->type==JT_transY)  j->axis = j->X.rot.getY();
+    if(j->type==JT_hingeZ || j->type==JT_transZ)  j->axis = j->X.rot.getZ();
+    if(j->type==JT_transXYPhi)  j->axis = j->X.rot.getZ();
+    if(j->type==JT_phiTransXY)  j->axis = j->X.rot.getZ();
 
-      j->to->X=j->X;
+    j->to->X=j->X;
 #if 1
-      j->to->X.appendTransformation(j->Q);
+    j->to->X.appendTransformation(j->Q);
 #else
-      j->applyTransformation(j->to->X, q);
+    j->applyTransformation(j->to->X, q);
 #endif
-      CHECK_EQ(j->to->X.pos.x, j->to->X.pos.x, "");
-      if(!isLinkTree) j->to->X.appendTransformation(j->B);
-    }
+    CHECK_EQ(j->to->X.pos.x, j->to->X.pos.x, "");
+    if(!isLinkTree) j->to->X.appendTransformation(j->B);
   }
   calc_fwdPropagateShapeFrames();
 }
@@ -958,38 +967,34 @@ void mlr::KinematicWorld::calc_fwdPropagateShapeFrames() {
 
 void mlr::KinematicWorld::calc_fwdPropagateVelocities(){
   mlr::Transformation f;
-  BodyL todoBodies = bodies;
   Vector q_vel, q_angvel;
-  for(Body *b: todoBodies) {
-    for(Joint *j:b->outLinks){ //this has no bailout for loopy graphs!
+  for(Joint *j : joints){ //this has no bailout for loopy graphs!
+    Body *from = j->from;
+    Body *to = j->to;
+    to->vel = from->vel;
+    to->angvel = from->angvel;
 
-      Body *to = j->to;
-      to->vel = b->vel;
-      to->angvel = b->angvel;
-
-      if(j->type==JT_hingeX){
+    if(j->type==JT_hingeX){
         q_vel.setZero();
         q_angvel.set(qdot(j->qIndex) ,0., 0.);
-      }else if(j->type==JT_transX){
+    }else if(j->type==JT_transX){
         q_vel.set(qdot(j->qIndex), 0., 0.);
         q_angvel.setZero();
-      }else if(j->type==JT_rigid){
+    }else if(j->type==JT_rigid){
         q_vel.setZero();
         q_angvel.setZero();
-      }else if(j->type==JT_transXYPhi){
+    }else if(j->type==JT_transXYPhi){
         q_vel.set(qdot(j->qIndex), qdot(j->qIndex+1), 0.);
         q_angvel.set(0.,0.,qdot(j->qIndex+2));
-      }else NIY;
+    }else NIY;
 
-      Matrix R = j->X.rot.getMatrix();
-      Vector qV(R*q_vel); //relative vel in global coords
-      Vector qW(R*q_angvel); //relative ang vel in global coords
-      to->vel += b->angvel^(to->X.pos - b->X.pos);
-      if(!isLinkTree) to->vel += qW^(to->X.pos - j->X.pos);
-      to->vel += qV;
-      to->angvel += qW;
-      todoBodies.setAppend(j->to);
-    }
+    Matrix R = j->X.rot.getMatrix();
+    Vector qV(R*q_vel); //relative vel in global coords
+    Vector qW(R*q_angvel); //relative ang vel in global coords
+    to->vel += from->angvel^(to->X.pos - from->X.pos);
+    if(!isLinkTree) to->vel += qW^(to->X.pos - j->X.pos);
+    to->vel += qV;
+    to->angvel += qW;
   }
 }
 
@@ -1332,6 +1337,10 @@ void mlr::KinematicWorld::calc_Q_from_q(int agent){
 
         case JT_quatBall:{
           j->Q.rot.set(q.p+n);
+          {
+              double n=j->Q.rot.normalization();
+              if(n<.5 || n>2.) LOG(-1) <<"quat normalization is extreme: " <<n <<endl;
+          }
           j->Q.rot.normalize();
           j->Q.rot.isZero=false; //WHY? (gradient check fails without!)
           n+=4;
@@ -1340,6 +1349,10 @@ void mlr::KinematicWorld::calc_Q_from_q(int agent){
         case JT_free:{
           j->Q.pos.set(q.p+n);
           j->Q.rot.set(q.p+n+3);
+          {
+              double n=j->Q.rot.normalization();
+              if(n<.5 || n>2.) LOG(-1) <<"quat normalization is extreme: " <<n <<endl;
+          }
           j->Q.rot.normalize();
           j->Q.rot.isZero=false;
           n+=7;
@@ -2711,9 +2724,7 @@ void mlr::KinematicWorld::meldFixedJoints(int verbose) {
     a->inertia += b->inertia;
     b->mass = 0.;
   }
-  qdim.clear();
-  proxies.clear();
-  analyzeJointStateDimensions();
+  jointSort();
   calc_q_from_Q();
   checkConsistency();
   //-- remove fixed joints and reindex
@@ -2731,6 +2742,8 @@ void mlr::KinematicWorld::glDraw(OpenGL& gl) {
   double GLmatrix[16];
 
   glPushMatrix();
+
+  glColor(.5, .5, .5);
 
   //bodies
   if(orsDrawBodies) for(Shape *s: shapes) {
@@ -3268,14 +3281,6 @@ void transferKI_ft_BetweenTwoWorlds(arr& KI_ft_To, const arr& KI_ft_From, const 
 //===========================================================================
 
 
-
-
-extern void glDrawRect(float, float, float, float, float, float,
-                       float, float, float, float, float, float);
-
-extern void glDrawText(const char* txt, float x, float y, float z);
-
-//void glColor(float *rgb);//{ glColor(rgb[0], rgb[1], rgb[2], 1.); }
 
 #ifndef MLR_ORS_ONLY_BASICS
 

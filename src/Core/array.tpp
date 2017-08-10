@@ -328,6 +328,7 @@ template<class T> mlr::SparseMatrix::SparseMatrix(mlr::Array<T>& X){
 #  pragma clang diagnostic ignored "-Wdynamic-class-memaccess"
 #endif
 
+#if 0
 /// allocate memory (maybe using \ref flexiMem)
 template<class T> void mlr::Array<T>::resizeMEM(uint n, bool copy, int Mforce) {
   if(n==N && Mforce<0) return; //no change
@@ -391,20 +392,6 @@ template<class T> void mlr::Array<T>::resizeMEM(uint n, bool copy, int Mforce) {
   N=n;
 }
 
-///this was a reference; becomes a copy
-template<class T> mlr::Array<T>& mlr::Array<T>::dereference(){
-  CHECK(reference,"can only dereference a reference!");
-  uint n=N;
-  T* pold=p;
-  reference=false;
-  N=M=0;
-  p=NULL;
-  resizeMEM(n, false);
-  CHECK_EQ(memMove,1,"only with memmove");
-  memmove(p, pold, sizeT*N);
-  return *this;
-}
-
 /// free all memory and reset all pointers and sizes
 template<class T> void mlr::Array<T>::freeMEM() {
 #ifdef MLR_GLOBALMEM
@@ -419,6 +406,48 @@ template<class T> void mlr::Array<T>::freeMEM() {
   d=&d0;
   //special=NULL;
   reference=false;
+}
+
+#else
+/// allocate memory (maybe using \ref flexiMem)
+template<class T> void mlr::Array<T>::resizeMEM(uint n, bool copy, int Mforce) {
+    if(n==N) return;
+    CHECK(!reference, "resize of a reference (e.g. subarray) is not allowed! (only a resize without changing memory size)");
+    vec_type::resize(n);
+    p = vec_type::data();
+    N = n;
+}
+
+/// free all memory and reset all pointers and sizes
+template<class T> void mlr::Array<T>::freeMEM() {
+    if(!reference){
+        vec_type::clear();
+    }else{
+        vec_type::_M_impl._M_start = NULL;
+        vec_type::_M_impl._M_finish = NULL;
+        vec_type::_M_impl._M_end_of_storage = NULL;
+    }
+    if(d && d!=&d0){ delete[] d; d=NULL; }
+    p=NULL;
+    M=N=nd=d0=d1=d2=0;
+    d=&d0;
+    reference=false;
+}
+#endif
+
+///this was a reference; becomes a copy
+template<class T> mlr::Array<T>& mlr::Array<T>::dereference(){
+  CHECK(reference,"can only dereference a reference!");
+  NIY; //not for the new vector versoin..
+  uint n=N;
+  T* pold=p;
+  reference=false;
+  N=M=0;
+  p=NULL;
+  resizeMEM(n, false);
+  CHECK_EQ(memMove,1,"only with memmove");
+  memmove(p, pold, sizeT*N);
+  return *this;
 }
 
 /// reset the dimensionality pointer d to point to &d0
@@ -495,10 +524,7 @@ template<class T> void mlr::Array<T>::setAppend(const T& x) {
 
 /// append elements of another array to the array which are not included yet -- the array might become 1D! [TL]
 template<class T> void mlr::Array<T>::setAppend(const mlr::Array<T>& x) {
-  uint i;
-  FOR1D(x, i) {
-    setAppend(x(i));
-  }
+  for(const T& i:x) setAppend(i);
 }
 
 /// remove and return the first element of the array (must have size>1)
@@ -708,8 +734,7 @@ template<class T> void mlr::Array<T>::resizeDim(uint k, uint dk) {
 
 /// return a uint-Array that contains (acutally refers to) the dimensions of 'this'
 template<class T> mlr::Array<uint> mlr::Array<T>::dim() const {
-  Array<uint> dims(d, nd);
-  dims.dereference();
+  Array<uint> dims(d, nd, false);
   return dims;
 }
 
@@ -1117,6 +1142,9 @@ template<class T> void mlr::Array<T>::referTo(const T *buffer, uint n) {
   reference=true;
   nd=1; d0=n; d1=d2=0; N=n;
   p=(T*)buffer;
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /** @brief returns an ordinary 2-dimensional C-pointer to the Array content.
@@ -1375,6 +1403,9 @@ template<class T> void mlr::Array<T>::referTo(const mlr::Array<T>& a) {
   reference=true; memMove=a.memMove;
   N=a.N; nd=a.nd; d0=a.d0; d1=a.d1; d2=a.d2;
   p=a.p;
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /// make this array a subarray reference to \c a
@@ -1399,6 +1430,9 @@ template<class T> void mlr::Array<T>::referToRange(const mlr::Array<T>& a, int i
     nd=3;  d0=I+1-i; d1=a.d1; d2=a.d2;  N=d0*d1*d2;
     p=a.p+i*d1*d2;
   }
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /// make this array a subarray reference to \c a
@@ -1420,6 +1454,9 @@ template<class T> void mlr::Array<T>::referToRange(const Array<T>& a, uint i, in
     nd=2;  d0=J+1-j; d1=a.d2; d2=0;  N=d0*d1;
     p = &a(i,j,0);
   }
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /// make this array a subarray reference to \c a
@@ -1440,6 +1477,9 @@ template<class T> void mlr::Array<T>::referToDim(const mlr::Array<T>& a, uint i)
     if(nd>3) { d=new uint[nd];  memmove(d, a.d+1, nd*sizeof(uint)); }
   }
   p=a.p+i*N;
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /// make this array a subarray reference to \c a
@@ -1454,6 +1494,9 @@ template<class T> void mlr::Array<T>::referToDim(const mlr::Array<T>& a, uint i,
   } else {
     NIY // TODO
   }
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /// make this array a subarray reference to \c a
@@ -1474,6 +1517,9 @@ template<class T> void mlr::Array<T>::referToDim(const mlr::Array<T>& a, uint i,
     if(nd>3) { d=new uint[nd];  memmove(d, a.d+3, nd*sizeof(uint)); }
   }
   p=a.p+(i*a.N+(j*a.N+(k*a.N/a.d2))/a.d1)/a.d0;
+  vec_type::_M_impl._M_start = p;
+  vec_type::_M_impl._M_finish = p+N;
+  vec_type::_M_impl._M_end_of_storage = p+N;
 }
 
 /** @brief takes over the memory buffer from a; afterwards, this is a
@@ -1487,6 +1533,7 @@ template<class T> void mlr::Array<T>::takeOver(mlr::Array<T>& a) {
   M=a.M;
   a.reference=true;
   a.M=0;
+  HALT("vec not done yet");
 }
 
 template<class T> void mlr::Array<T>::swap(Array<T>& a) {
@@ -1496,6 +1543,7 @@ template<class T> void mlr::Array<T>::swap(Array<T>& a) {
   T* p_tmp = p;
   p=a.p;
   a.p=p_tmp;
+  HALT("vec not done yet");
 }
 
 /** @brief return a `dim'-dimensional grid with `steps' intervals
@@ -1847,16 +1895,6 @@ template<class T> void mlr::Array<T>::readRaw(std::istream& is) {
 template<class T> void mlr::Array<T>::writeRaw(std::ostream& os) const {
   write(os, " ", "\n", "  ");
 }
-
-/// TL 15.07.08
-template<class T> void mlr::Array<T>::writeWithIndex(std::ostream& os) const {
-  uint i;
-  FOR1D((*this), i) {
-    os<<i <<" " <<elem(i) <<endl;
-  }
-}
-
-//***** generic data files of double arrays
 
 /// write data with a name tag (convenient to write multiple data arrays into one file)
 template<class T> void mlr::Array<T>::writeTagged(std::ostream& os, const char* tag, bool binary) const {

@@ -68,7 +68,7 @@ OptOptions::OptOptions() {
   stopTinySteps = mlr::getParameter<uint>  ("opt/stopTinySteps", 10);
   initStep  = mlr::getParameter<double>("opt/initStep", 1.);
   minStep   = mlr::getParameter<double>("opt/minStep", -1.);
-  maxStep   = mlr::getParameter<double>("opt/maxStep", .5);
+  maxStep   = mlr::getParameter<double>("opt/maxStep", .2);
   damping   = mlr::getParameter<double>("opt/damping", .1);
   stepInc   = mlr::getParameter<double>("opt/stepInc", 2.);
   stepDec   = mlr::getParameter<double>("opt/stepDec", .1);
@@ -77,7 +77,7 @@ OptOptions::OptOptions() {
   wolfe     = mlr::getParameter<double>("opt/wolfe", .01);
   nonStrictSteps= mlr::getParameter<uint>  ("opt/nonStrictSteps", 0);
   allowOverstep= mlr::getParameter<bool>  ("opt/allowOverstep", false);
-  constrainedMethod = (ConstrainedMethodType)mlr::getParameter<int>("opt/constrainedMethod", anyTimeAula);
+  constrainedMethod = (ConstrainedMethodType)mlr::getParameter<int>("opt/constrainedMethod", augmentedLag);
   muInit = mlr::getParameter<double>("opt/muInit", 1.);
   muLBInit = mlr::getParameter<double>("opt/muLBInit", 1.);
   aulaMuInc = mlr::getParameter<double>("opt/aulaMuInc", 2.);

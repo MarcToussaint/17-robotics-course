@@ -13,12 +13,7 @@
     --------------------------------------------------------------  */
 
 #include "spline.h"
-
-//fwd declarations
-void plot(bool wait=true, const char* txt=0);
-void plotClear();
-void plotFunction(const arr& f, double x0=0., double x1=0.);
-
+#include <Plot/plot.h>
 
 //==============================================================================
 //
@@ -43,7 +38,6 @@ void Spline::plotBasis() {
   for(uint i=0; i<points.d0; i++) plotFunction(basis_trans[i], -1, 1);
   plot();
 }
-
 
 
 arr Spline::getCoeffs(double t, uint K, uint derivative) const {

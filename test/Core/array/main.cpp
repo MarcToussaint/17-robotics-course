@@ -198,6 +198,19 @@ void TEST(Basics){
 
 //===========================================================================
 
+void TEST(Iterations) {
+  arr x(10);
+  x.setStraightPerm();
+  x += 10.;
+  cout <<x <<endl;
+
+  for(auto& e:x.enumerated()){
+    cout <<e.i <<' ' <<e() <<endl;
+  }
+}
+
+//===========================================================================
+
 void TEST(StdVectorCompat) {
   std::vector<double> x(3);
   x[0]=1.;
@@ -846,6 +859,7 @@ int MAIN(int argc, char **argv){
   mlr::initCmdLine(argc, argv);
 
   testBasics();
+  testIterations();
   testCheatSheet();
   testInitializationList();
   testSimpleIterators();
