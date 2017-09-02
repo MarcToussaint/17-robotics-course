@@ -2,25 +2,26 @@
 
 
 void simpleArrayOperations(){
-  arr x;
-  x = ARR(.1, .2, .3);         //directly setting the array
+
+  /********* SEE PAGE 2 OF THE /doc/doc.pdf  ***********/
+  
+  arr x = {.1, .2, .3};         //directly setting the array
   cout <<"x = " <<x <<endl;
 
-  x += ARR(2., 2., 2.);        //adding to an array
+  x += arr({2., 2., 2.});        //adding to an array
   cout <<"x = " <<x <<endl;
 
   x *= 1.;
   cout <<"x = " <<x <<endl;
 
-  arr y = ARR(-.3,-.2,-.1);
+  arr y = {-.3,-.2,-.1};
   y.append(x);                 //appending a vector to a vector
   cout <<"y = " <<y <<endl;
 
-  arr M(4,3);                  //some 3 x 4 matrix
-  M[0] = ARR(1, 0, 0);         //setting the first row
-  M[1] = ARR(0, 1, 0);
-  M[2] = ARR(0, 0, 1);
-  M[3] = ARR(1, 0, 0);
+  arr M(4, 3, { 1, 0, 0,                //some 4x3 matrix
+                0, 1, 0,
+                0, 0, 1,
+                1, 0, 0 });
 
   cout <<"M =\n" <<M <<endl;
 

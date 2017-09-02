@@ -1,0 +1,1223 @@
+
+\documentclass[10pt,fleqn,twoside]{article}
+\usepackage{palatino}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{eucal}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{framed}
+  \definecolor{shadecolor}{gray}{0.9}
+  \setlength{\FrameSep}{3pt}
+
+\usepackage[round]{natbib}
+\bibliographystyle{abbrvnat}
+%\usepackage[german]{babel}
+%\usepackage[utf8]{inputenc}
+
+\graphicspath{{pics/}{figs/}{~/write/tex/pics/}{~/write/tex/figs/}{~/teaching/pics-all/}}
+\usepackage{geometry}
+\geometry{a4paper,hdivide={35mm,*,35mm},vdivide={35mm,*,35mm}}
+\renewcommand{\baselinestretch}{1.1}
+
+\newenvironment{items}{
+\par\small
+\begin{list}{--}{\leftmargin4ex \rightmargin0ex \labelsep1ex \labelwidth2ex
+\topsep0pt \parsep0ex \itemsep3pt}
+}{
+\end{list}
+}
+
+\input{macros}
+
+\newcommand{\rf}{{\text{ref}}}
+\newcommand{\eig}{{\text{eig}}}
+\newcommand{\bJ}{{\mathbf{J}}}
+\newcommand{\bh}{{\mathbf{h}}}
+\newcommand{\bH}{{\mathbf{H}}}
+\newcommand{\ft}{\text{ft}}
+
+\newcommand{\pos}{{\textsf{p}}}
+\newcommand{\eff}{{\textsf{eff}}}
+\newcommand{\rotvec}{{\textsf{w}}}
+\newcommand{\veC}{{\textsf{v}}}
+\newcommand{\quat}{{\textsf{q}}}
+\newcommand{\col}{{\textsf{col}}}
+\newcommand{\TR}[2]{T_{{#1}\rightarrow{#2}}}
+\newcommand{\RO}[2]{R_{{#1}\rightarrow{#2}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pdflatex
+\usepackage{fancyvrb}
+\DefineShortVerb{\@}
+\fvset{numbers=none,xleftmargin=5ex,fontsize=\footnotesize}
+
+\title{Guide to the MLR Code}
+\author{M Toussaint}
+
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Code needs mathematical grounding.
+\end{abstract}
+
+{\footnotesize\tableofcontents
+
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Linear Algebra}
+
+I spare the description of the @mlr::Array@ class -- it is a standard
+tensor storage. It's implementation and interface is very similar to
+Octave's Array class.
+
+Instead I just provide my recommentation for C++ operator overloading
+for easy linear algebra syntax.
+
+\noindent
+\begin{tabular}{|p{.25\columnwidth}|p{.4\columnwidth}|p{.4\columnwidth}|}
+\hline
+& Tensor/Matlab notation
+& C++
+\\
+\hline
+``inner'' product\footnotemark[1]
+& $C_{ijl} = \sum_k A_{ijk} B_{kl}$
+& @A * B@
+\\
+index-wise product\footnotemark[2]
+& $c_i = a_i b_i$ ~or~ $c=a\circ b$
+& @a % b@
+\\
+& $C_{ijkl} = A_{ijk} B_{kl}$
+& @A % B@
+\\
+diag
+& $\diag(a)$
+& @diag(a)@
+\\
+& $\diag(a) B$ ~or~ $c_i = a_i B_{ij}$
+& @a % B@ ~or~ @diag(a) * B@
+\\
+element-wise product
+& $c_i = a_i b_i$ ~or~ $c=a\circ b$
+& @a % b@
+\\
+& $C_{ij} = A_{ij} B_{ij}$  ~or~ $C=A\circ B$
+& no operator-overload!\footnotemark[3]\newline @elemWiseProduct(A,B)@
+\\
+outer product
+& $C_{ijklm} = A_{ijk} B_{lm}$
+& @A ^ B@
+\\
+& $a b^\T$ ~ (vectors)
+& @a ^ b@
+\\
+transpose
+& $A_{ij} = B_{ji}$
+& @A = ~B@
+\\
+inverse
+& $A B^\1 C$
+& @A*(1/B)*C@
+\\
+& $A^\1 b$ ~ (or @A\b@ in Matlab)
+& @A|b@ %(\footnotemark[4])
+\\
+\hline
+element \emph{reference}\footnotemark[5]
+& $A_{103}$
+& @A(1,0,3)@
+\\
+& $A_{(n-2)03}$
+& @A(-2,0,3)@
+\\
+sub-\emph{references!}\footnotemark[6]
+& $x_i=A_{2i}$
+& @A(2,{})@ ~or~ @A[2]@
+\\
+& $C_{i} = A_{20i}$ ~or~ @C=A[2,0,:]@
+& @A(2,0,{})@ ~ (\footnotemark[7])
+\\
+&  $C_{ijk} = A_{20ijk}$
+& @A(2,0,{})@ ~ {\tiny (trailing @{},{}..@ are implicit)}
+\\
+sub-refercing ranges\footnotemark[8]
+& @C=A[2:4,:,:]@
+& @A({2,4})@ ~ {\tiny (trailing @{},{}..@ are implicit)}
+\\
+& @A[2,1:3,:]@
+& @A(2,{1,3})@
+\\
+\hline
+sub-\emph{copies}\footnotemark[9]
+& @A(1:3, :, 5:)@
+& @A.sub(1,3, 0,-1, 5,-1)@
+\\
+sub-selected-copies
+& @A[{1,3,4},:,{2,3},2:5]@
+& @A.sub({1,3,4}, 0,-1, {2,3}, 2,5)@
+\\
+\hline
+sub-assignment\footnotemark[10]
+& @A[4:6, 2:5] = B@ ~ ($B\in\RRR^{3\times 4}$)
+& @A.setBlock(B, 4, 2)@
+\\
+& @x[4:6] = b@ ~ ($b\in\RRR^3$)
+& @x.setBlock(b, 4)@ ~or~ @x({4,6}) = b@
+\\
+\hline
+initialization
+& @A=[1 2 3]'@
+& @arr A={1.,2,3}@ ~or~ @arr A(3, {1.,2,3})@
+\\
+& @A=[1 2 3]@
+& @arr A=~arr({1.,2,3})@ ~or~ @arr A(1, 3, {1.,2,3})@
+\\
+& @A=[1 2; 3 4]@
+& @arr A(2,2, {1.,2,3,4})@
+\\
+\hline
+concatenation
+& $(x^\T,y^\T,z^\T)^\T$ ~ (stacked vectors)
+& @(x,y,z)@
+\\
+& @cat(1,A,B)@ ~ (stacked matrices)
+& @(A,B)@ ~ (memory serial)
+\\
+\hline
+\end{tabular}
+\footnotetext[1]{The word ``inner'' product should,
+  strictly, be used to refer to a general 2-form $\<\cdot,\cdot\>$
+  which, depending on coordinates, may have a non-Euclidean metric
+  tensor. However, here we use it in the sense of ``assuming Euclidean
+  metric''.}
+\footnotetext[2]{For matrices or tensors, this is \emph{not} the
+  element-wise (Hadamard) product!}
+\footnotetext[3]{The elem-wize product for
+  matricies/tensors is much less used within equations than what I call 'index-wise product'.}
+%% \footnotetext[4]{Caution! This is notation is somewhat awkward -- it calls a special solver for $A^\1 b$
+%%   instead of computing $A^\1$ separately.}
+\footnotetext[5]{Negative indices are always interpreted as $n-index$. As
+we start indexing from 0, the index $n$ is already out of range. $n-1$
+is the last entry. An index of -1 therefore means 'last'.}
+\footnotetext[6]{In C++, assuming the last index to be
+  memory aligned, sub-referencing is only efficient w.r.t.\ major
+  indices: the reference then points to the same memory as the parent
+  tensor.}
+\footnotetext[7]{As a counter example, \texttt{A[:,0,2]} could be referenced in a memory aligned manner. It can only be copied with \texttt{A.sub(0,-1,0,0,2,2)}}
+\footnotetext[8]{again, this can only be ranges
+  w.r.t.\ the major index, to ensure memory alignment}
+%% \footnotetext[1]{Note: The same for \emph{copying} would be
+%%   @A.sub(2,4,0,-1,0,-1)@ resp.\ @A.sub(2,2,1,3,0,-1)@ }
+\footnotetext[9]{this is a $\RRR^{3\times ...}$
+  matrix: The '3' is \emph{included} in the range.}
+\footnotetext[10]{As the assignments are not memory-aligned,
+  they can't be done with returned references.}
+
+\section{Graph}
+
+Our graph syntax is a bit different to standard conventions. Actually,
+our graph could be called a \emph{key-value hierarchical hyper graph}:
+nodes can play the role of normal nodes, or hypernodes (=edges or
+factors/cliques) that connect other nodes. Every node also has a set
+of keys (or tags, to retrieve the node by name) and a typed value
+(every node can be of a different type). This value can also be a
+graph, allowing to represent hierarchies of graphs and subgraphs.
+\begin{itemize}
+\item A graph is a set of nodes
+\item Every node has three properties:
+\begin{items}
+\item A tuple of \textbf{keys} (=strings)
+\item A tuple of \textbf{parents} (=references to other nodes)
+\item A typed \textbf{value} (the type may differ for every node)
+\end{items}
+\end{itemize}
+Therefore, depending on the use case, such a graph could represent
+just a key-value list, an 'any-type' container (container of things of
+varying types), a normal graph, a hierarchical graph, or an xml data
+structure.
+
+We use the graph in particular also to define a generic file format,
+which we use for configuration (parameter) files, files that define
+robot kinematic and geometry, or any other structured data. This ascii
+file format of a graph helps to also understand the data
+structure. Here is the @example.g@ from @test/Core/graph@:
+\begin{shaded}
+\begin{Verbatim}[fontfamily=courier,fontsize=\tiny]
+## a trivial graph
+x            # a 'vertex': key=x, value=true, parents=none
+y            # another 'vertex': key=y, value=true, parents=none
+(x y)        # an 'edge': key=none, value=true, parents=x y
+x            # key=x, value=true, parents=none
+y            # key=y, value=true, parents=none
+(x y)        # key=none, value=true, parents=x y
+(-1 -2)      # key=none, value=true, parents=the previous and the y-node
+
+## a bit more verbose graph
+node A{ color=blue }         # keys=node A, value=<Graph>, parents=none
+node B{ color=red, value=5 } # keys=node B, value=<Graph>, parents=none
+edge C(A,B){ width=2 }       # keys=edge C, value=<Graph>, parents=A B
+hyperedge(A B C) = 5         # keys=hyperedge, value=5, parents=A B C
+
+## standard value types
+a=string      # MT::String (except for keywords 'true' and 'false' and 'Mod' and 'Include')
+b="STRING"    # MT::String (does not require a '=')
+c='file.txt'  # MT::FileToken (does not require a '=')
+d=-0.1234     # double
+e=[1 2 3 0.5] # MT::arr (does not require a '=')
+#f=(c d e)    # DEPRECATED!! MT::Array<*Node> (list of other nodes in the Graph)
+g!            # bool (default: true, !means false)
+h=true        # bool
+i=false       # bool
+j={ a=0 }     # sub-Graph (special: does not require a '=')
+
+## parsing: = {..} (..) , and \n are separators for parsing key-value-pairs
+b0=false b1 b2, b3() b4   # 4 boolean nodes with keys 'b0', 'b1 b2', 'b3', 'b4'
+k={ a, b=0.2 x="hallo"     # sub-Graph with 6 nodes
+  y
+  z()=filename.org x }
+
+## special Node Keys
+
+## editing: after reading all nodes, the Graph takes all Edit nodes, deletes the Edit tag, and calls a edit()
+## this example will modify/append the respective attributes of k
+Edit k { y=false, z=otherString, b=7, c=newAttribute }
+
+## including
+Include = 'example_include.g'   # first creates a normal FileToken node then opens and includes the file directly
+
+## any types
+#trans=<T t(10 0 0)>  # 'T' is the tag for an arbitrary type (here an ors::Transformation)
+                      # which was registered somewhere in the code using the registry()
+                      # (does not require a '=')
+
+## strange notations
+a()       # key=a, value=true, parents=none
+()        # key=none, value=true, parents=none
+[1 2 3 4] # key=none, value=MT::arr, parents=none
+\end{Verbatim}
+\end{shaded}
+
+A special case is when a node has a Graph-typed value. This is
+considered a \textbf{subgraph}. Subgraphs are sometimes handled
+special: their nodes can have parents from the containing graph, or
+from other subgraphs of the containing graph. Some methods of the
+@Graph@ class (to find nodes by key or type) allow to specify whether
+also nodes in subgraphs or parentgraphs are to be searched.
+
+\section{Logic -- A graph implementation of First Order Logic}
+
+We represent everything, a full knowledge base (KB), as a graph:
+\begin{itemize}
+\item Symbols (both, constants and predicate symbols) are nil-valued
+  nodes. We assume that they are declared in the root scope of the
+  graph
+\item A grounded literal is a tuple of symbols, for instance
+  @(on box1 box2)@. Note that we can equally write this as
+  @(box1 on box2)@. There is no need to have the 'predicate' first. In
+  fact, the basic methods do not distinguish between predicate and
+  contant symbols.
+\item A universal quantification $\forall X$ is represented as a scope
+  (=subgraph) which first declares the logic variables as nil-valued
+  nodes as the subgraph, then the rest. The rest is typically an
+  implication, i.e., a rule. For instance
+$$\forall X Y~ p(X, Y) q(Y) \To q(X)$$
+ is represented as @{X, Y, { (p X Y) (q Y) } { (q X) }@
+where the precondition and postconditions are subgraphs of the
+rule-subgraph.
+\end{itemize}
+Here is how the standard FOL example from Stuart Russell's lecture is represented:
+\begin{shaded}
+\begin{Verbatim}[fontfamily=courier,fontsize=\tiny]
+Constant M1
+Constant M2
+Constant Nono
+Constant America
+Constant West
+
+American
+Weapon
+Sells
+Hostile
+Criminal
+Missile
+Owns
+Enemy
+
+STATE {
+(Owns Nono M1),
+(Missile M1),
+(Missile M2),
+(American West),
+(Enemy Nono America)
+}
+
+Query { (Criminal West) }
+
+Rule {
+x, y, z,
+{ (American x) (Weapon y) (Sells x y z) (Hostile z) }
+{ (Criminal x) }
+}
+
+Rule {
+x
+{ (Missile x) (Owns Nono x) }
+{ (Sells West x Nono) }
+}
+
+Rule {
+x
+{ (Missile x) }
+{ (Weapon x) }
+}
+
+Rule {
+x
+{ (Enemy x America) }
+{ (Hostile x) }
+}
+\end{Verbatim}
+\end{shaded}
+
+By default all tuples in the graph are boolean-valued with default
+value true. In the above example all literals are actually
+true-valued. A rule @{X, Y, { (p X Y) (q Y) } { (q X)! }@
+means $\forall X Y~ p(X, Y) q(Y) \To \neg q(X)$. If in the KB we only
+store true facts, this would 'delete' the fact @(q X)!@ from the KB
+(for some $X$).
+
+As nodes of our graph can be of any type, we can represent predicates
+of any type, for instance @{X, Y, { (p X Y) (q Y)=3 } { (q X)=4 }@
+would let $p(X)$ be double-typed.
+
+
+\subsection{Methods}
+
+The most important methods are the following:
+\begin{itemize}
+\item Checking whether \textbf{two facts are equal}. Facts are
+  grounded literals. Equality is simply checked by checking if all
+  symbols (predicate or constant) in the tuples are equal. Optionally
+  (by default), it is also checked if the fact values are equal.
+\item Checking whether \textbf{a fact equals a
+  literal+substitution}. The literal is a tuple of symbols, some of
+  which may be first order variables. All variables must be of the
+  same scope (=declared in the same subgraph, in the same rule). The
+  substitution is a mapping of these variables to root-level symbols
+  (predicate of constant symbols). The methods loops through the
+  literal's symbols; whenever a symbol is in the substitution scope it
+  replaces it by the substitution; then compares to the fact
+  symbol. Optionally (by default) also the value is checked for equality.
+\item Check whether \textbf{a fact is directly true in a KB (or
+  scope)} (without inference). This uses the graph connectivity to
+  quickly find any KB-fact that shares the same symbols; then checks
+  these for exact equality.
+\item Check whether \textbf{a literal+substitution is directly true in
+  a KB} (without inference).
+\item Given a single literal with only ONE logic variable, and a KB of facts,
+  \textbf{compute the domain} (=possible values of the variable) for the
+  literal to be true. If the literal is negated the $D \gets
+  D\setminus d$, otherwise $D \gets D \cup d$ if the $d$ is the domain
+  for true facts in the KB. [TODO: do this also for multi-variable literals]
+\item \textbf{Compute the set of possible substitutions for a
+  conjunction of literals} (typically precondition of a rule) to be
+  true in a KB.
+\item \textbf{Apply a set of 'effect literals'} (RHS of a rule): generate facts
+  that are substituted literals
+\end{itemize}
+
+Given these methods, forward chaining, or forward simulation (for
+MCTS) is straight-forward. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Optim -- data structures to represent non-linear programs, and
+  basic solvers}
+
+The optimization code contributes a nice way to represent (structured)
+optimization problems, and a few basic solvers for constrained and
+unconstrained, black-box, gradient-, and hessian-available problems.
+
+\subsection{Representing Optimization Problems}
+
+The data structures to represent optimization problems are
+
+A \textbf{standard unconstrained problem}
+\begin{align}
+\min_x f(x)
+\end{align}
+\begin{shaded}
+\begin{Verbatim}
+typedef std::function<double(arr& df, arr& Hf, const arr& x)> ScalarFunction;
+\end{Verbatim}
+\end{shaded}
+The double return value is $f(x)$. The gradient @df@ is returned only
+on request (for @df!=NoArr@). The hessian @Hf@ is returned only on
+request. If the caller requests @df@ or @Hf@ but the implementation
+cannot compute gradient or hessian, the implementation should @HALT@.
+
+These can be implemented using a lambda expression or setting it equal
+to a C-function. See the examples. 
+
+A \textbf{sum-of-squares problem} (Gauss-Newton type)
+\begin{align}
+\min_x y(x)^\T y(x)
+\end{align}
+\begin{shaded}
+\begin{Verbatim}
+typedef std::function<void(arr& y, arr& Jy, const arr& x)> VectorFunction;
+\end{Verbatim}
+\end{shaded}
+where the vector @y@ must always be returned. The Jacobian @Jy@ is
+returned on request (@Jy!=NoArr@).
+
+A \textbf{constrained problem} (for vector valued functions $f,y,g,h$)
+\begin{align}\label{eqConstrained}
+\min_x \sum_i f_i(x) + y(x)^\T y(x) \st g(x) \le 0\comma h(x) = 0
+\end{align}
+Note that we can rewrite this as
+\begin{align}
+\min_x \sum_{t\in F} \phi_t(x) + \sum_{t\in Y} \phi_t(x)^\T \phi_t(x)
+\st \forall_{t\in G}:~ \phi_t(x)\le 0\comma \forall_{t\in H}:~ \phi_t(x)=0 ~,
+\end{align}
+where the vector-valued \emph{feature} function $\phi$ contains all $f_i, y_i, g_i,
+h_i$, and the disjoint partition $F \cup Y \cup G \cup H = \{1,..,T\}$ indicates whether the
+$t$-th feature contributes a scalar objective, sum-of-square objective,
+inequality constraint or equality constraint. We represent this as
+\begin{shaded}
+\begin{Verbatim}
+enum TermType { noTT=0, fTT, sumOfSqrTT, ineqTT, eqTT };
+typedef mlr::Array<TermType> TermTypeA;
+struct ConstrainedProblem{
+  virtual ~ConstrainedProblem() = default;
+  virtual void phi(arr& phi, arr& J, arr& H, TermTypeA& tt, const arr& x) = 0;
+};
+\end{Verbatim}
+\end{shaded}
+Here, the returned @phi@ is the feature vector and the returned @tt@
+indicates for every @phi@-entry its type
+%
+(@fTT, sumOfSqrTT, ineqTT, eqTT@). The (on request) returned @J@ is the Jacobian of @phi@. The
+(on request) returned @H@ is the Hessian \emph{of the scalar features
+  only}, that is, the Hessian of $\sum_i f_i(x)$.
+
+A \textbf{structured constrained problem}: Assume we have $N$ decision
+variables $x_i \in \RRR^{d_i}$, each with its own dimensionality
+$d_i$. Assume we have $J$ features $\phi_{j=1,..,J}$, but each feature $\phi_j$
+depends on only a tuples $X_j \subseteq \{x_1,..,x_N\}$ of variables. We minimize
+\begin{align}\label{eqGraphOpt}
+\min_{x_{1:N}} \sum_{j\in F} \phi_j(X_j) + \sum_{j\in Y} \phi_j(X_j)^\T \phi_j(X_j)
+\st \forall_{j\in G}:~ \phi_j(X_j)\le 0\comma \forall_{j\in H}:~ \phi_j(X_j)=0 ~.
+\end{align}
+\begin{shaded}
+\begin{Verbatim}
+struct GraphProblem {
+  virtual void getStructure(uintA& variableDimensions, uintAA& featureVariables, TermTypeA& featureTypes) = 0;
+  virtual void phi(arr& phi, arrA& J, arrA& H, const arr& x) = 0;
+};
+\end{Verbatim}
+\end{shaded}
+Here we decided to provide a method that first allows the optimizer to
+query the structure of the problem: return $N$, $d_{i=1,..,N}$, $J$,
+$X_{t=1,..,J}$, and @tt@$_{i=1,..,J}$. This allows the optimizer to
+setup its own data structures or so. Then, in each iteration the
+optimizer only queries @phi(...)@. This always returns the
+$J$-dimensional feature vector @phi@, which contains an $f_i$, $y_i$,
+$g_i$ or $h_i$-value, depending on @tt(j)@. This @phi(j)@ may only
+depend on the decision variables $X_j$. On request it returns the
+gradient @J(j)@ of @phi(j)@ w.r.t.\ $X_j$. Note that the
+dimensionality of $X_j$ may vary---therefore we return an array of
+gradients instead of a Jacobian. On request also a hessian @H(j)@ is
+returned for the scalar objectives (when @tt(j)==fTT@).
+
+A \textbf{k-order Markov Optimization} problem. We have $T$ decision
+variables $x_{1,..,T}$, each with potentially different dimensionality
+$d_{1,..,T}$. We have $J$ features $\phi_{1,..,J}$, each of which may
+only depend on $k+1$ consecutive variables $X_j=(x_{t_j-k},..,x_{t_j})$, where
+$t_j$ tells us which $k+1$-tuple feature $\phi_j$ depends on. We
+minimize again \refeq{eqGraphOpt}. For easier readibility, this is equivalent to a problem of the form:
+\begin{align}\label{eqKOMO}
+\min_{x_{1:T}}&
+\sum_{t=1}^{T} y_t(x_{t-k:t})^\T y_t(x_{t-k:t})
+\st
+ \forall_t:~ g_t(x_{t-k:t}) \le 0\comma h_t(x_{t-k:t}) = 0 ~,
+\end{align}
+where the feature with same $t_k=t$ have been collected in different
+vector-value functions $y_t, g_t, h_t$.
+\begin{shaded}
+\begin{Verbatim}
+struct KOMO_Problem {
+  virtual uint get_k() = 0;
+  virtual void getStructure(uintA& variableDimensions, uintA& featureTimes, TermTypeA& featureTypes)=0;
+  virtual void phi(arr& phi, arrA& J, arrA& H, TermTypeA& tt, const arr& x) = 0;
+};
+\end{Verbatim}
+\end{shaded}
+Here, the structure function returns $N$, $d_{1,..,N}$, $J$, $t_j$,
+@tt(j)@.
+
+
+%% /** NOTE: Why do I define the functions with many arguments to return f, J, and constraints all at once,
+%%  * instead of having nice individual methods to return those?
+%%  *
+%%  * 1) Because I want these problem definitions (classes) to be STATE-LESS. That is, there should not be a set_x(x); before a get_f();
+%%  *    I really have bad experience with non-stateless problem definitions.
+%%  *
+%%  * 2) Because the computation of quantities is expensive and it is usually most efficient to compute all needed quantities together
+%%  *    (Instead of calling get_f(x); and then get_J(x); separately)
+%%  *
+%%  * The methods allow some returns to be optional: use NoArr
+%%  *
+%%  */
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Kinematics -- data structures to represent kinematic
+  configurations, interface models/optimizers/simulators, represent
+  task spaces}
+
+\subsection{Task Spaces}
+
+\subsubsection{Purpose}
+
+Task spaces are defined by a mapping $\phi:~ q\to y$ from the joint
+state $q\in\RRR^n$ to a task space $y\in\RRR^m$. They are central in
+designing motion and manipulation, both, in the context of trajectory
+optimization as well as in specifying position/force/impedance
+controllers:
+
+For \textbf{trajectory optimization}, cost functions are defined by
+costs or constraints in task spaces. Given a single task space $\phi$,
+we may define
+\begin{items}
+\item costs $\norm{\phi(q)}^2$,
+\item an inequality constraint $\phi(q)\le 0$ (element-wise inequality),
+\item an equality constraint $\phi(q) = 0$.
+\end{items}
+All three assume that the `target' is at zero. For convenience, the
+code allows to specify an additional linear transform $\tilde\phi(q)
+\gets \rho(\phi(q)-y_\text{ref})$, defined by a target reference
+$y_\text{ref}$ and a scaling $\rho$. In KOMO, costs and constraints
+can also be defined on $k+1$-tuples of consecutive states in task
+space, allowing to have cost and constraints on task space velocities
+or accelerations. Trajectory optimization problems are defined by many
+such costs/constraints in various task spaces at various time steps.
+
+For simple \textbf{feedback control}, in each task space we may have
+\begin{items}
+\item a desired linear acceleration behavior in the task space
+\item a desired force or force constraint (upper bound) in the task
+  space
+\item a desired impedance around a reference
+\end{items}
+All of these can be fused to a joint-level force-feedback controller
+(details, see controller docu). On the higher level, the control mode
+is specified by defining multiple task spaces and the desired
+behaviors in these. (The activity of such tasks (on the symbolic
+level) is controlled by the RelationalMachine, see its docu.)
+
+In both cases, defining task spaces is the core.
+
+\subsubsection{Basic notation}
+
+We follow the notation in the robotics lecture slides. We enumerate
+all bodies by $i\in\BB$. We typically use $v,w\in\RRR^3$ to denote
+vectors attached to bodies. $\TR{W}{i}$ is the 4-by-4 homogeneous
+transform from world frame to the frame of shape $i$, and $\RO{W}{i}$
+is its rotation matrix only. In the text (not in equations) we
+sometimes write
+$$(i+ v)$$
+where $i$ denotes a body and $v\in\RRR^3$ a relative 3D-vector. The
+rigorous notation for this would be $\TR{W}{i} v$, which is the
+position of $i$ plus the relative displacement $v$.
+
+To numerically evaluate kinematics we assume that, for a certain joint
+configuration $q$, the positions $p_k$ and axes $a_k$ of all joints
+$k\in JJ$ have been precomputed. The boolean expression
+$$[k\prec i] $$ iff joint $k$ is ``below'' body $i$ in the kinematic
+tree, that is, joint $k$ is between root and body $i$ and therefore
+moves it.
+
+Sometimes we write $J_{\cdot k}=...$, which means that the $k$th
+column of $J$ is defined as given.
+
+Let's first define
+\begin{align}
+(A_i)_{\cdot k}
+&= [k \prec i] [\text{$i$ rotational}]~ a_k && \text{axes matrix below $i$}
+\end{align}
+This matrix contains all rotational axes below $i$ as columns and will
+turn out convenient, because it captures all axes that make $i$
+move. Many Jacobians can easily be described using $A_i$. Analogously
+we define
+\begin{align}
+(T_i)_{\cdot k}
+&= [k \prec i] [\text{$i$ prismatic}]~ a_k && \text{prism matrix below $i$}
+\end{align}
+This captures all prismatic joints. Note the following relation to
+Featherstone's notation: In his notation, $h_k\in\RRR^6$ denotes, for
+very joint $k$, how much the joints contributes to rotation and translation,
+expressed in the link frame. The two matrices $A_i$ and $T_i$ together
+express the same, but in world coordinates. While typically axes have
+unit length (and entries of $h$ are zeros or ones), this is not necessary
+in general, allowing for arbitrary scaling of joint configurations $q$
+with these axis (e.g., using degree instead of radial units).
+
+For convenience, for a matrix of 3D columns $A\in\RRR^{n\times 3}$, we write
+$$B = A\times p \iff B_{\cdot k} = A_{\cdot k} \times p$$
+which is the column-wise cross product. Also, we define
+\begin{align}
+(\hat A_i)_{\cdot k}
+&= [k \prec i] [\text{$i$ rotational}]~ a_k \times p_k && \text{axes
+    position matrix below $i$}
+\end{align}
+which could also be written as $\hat A_i = A_i \times P$ if $P$
+contains all axes positions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{Task Spaces}
+
+\paragraph{Position}
+
+\begin{align}
+\phi^\pos_{iv}(q)
+ &= \TR{W}{i}~ v
+ && \text{position of $(i+v)$} \\
+J^\pos_{iv}(q)_{\cdot k}
+ &= [k\prec i]~ a_k \times(\phi^\pos_{iv}(q) - p_k) \\
+J^\pos_{iv}(q)
+ &= A_i \times \phi^\pos_{iv}(q) - \hat A_i \\
+\phi^\pos_{iv-jw}(q)
+ &= \phi^\pos_{iv} - \phi^\pos_{jw}
+ && \text{position difference} \\
+J^\pos_{iv-jw}(q)
+ & = J^\pos_{iv} - J^\pos_{jw} \\
+\phi^\pos_{iv|jw}(q)
+ & = R_j^\1 (\phi^\pos_{iv} - \phi^\pos_{jw})
+ && \text{relative position} \\
+J^\pos_{iv|jw}(q)
+ & = R_j^\1 [J^\pos_{iv}-J^\pos_{jw} - A_j \times (\phi^\pos_{iv} - \phi^\pos_{jw})]
+\end{align}
+
+Derivation: For $y=R p$ the derivative w.r.t.\ a rotation around axis
+$a$ is $y' = R p' + R' p = R p' + a \times R p$. For $y=R^\1 p$ the
+derivative is $y' = R^\1 p' - R^\1 (R') R^\1 p = R^\1 (p' - a \times
+p)$.  (For details see
+\url{http://ipvs.informatik.uni-stuttgart.de/mlr/marc/notes/3d-geometry.pdf})
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Vector}
+
+\begin{align}
+\phi^\veC_{iv}(q)
+ &= \RO{W}{i}~ v
+ && \text{vector} \\
+J^\veC_{iv}(q)
+ &= A_i\times \phi^\veC_{iv}(q) \\
+\phi^\veC_{iv-jw}(q)
+ &= \phi^\veC_{iv} - \phi^\veC_{jw}
+ && \text{vector difference} \\
+J^\veC_{iv-jw}(q)
+ &= J^\veC_{iv} - J^\veC_{jw} \\
+\phi^\veC_{iv|j}(q)
+ &= R_j^\1 \phi^\veC_{iv}
+ && \text{relative vector} \\
+J^\veC_{iv|j}(q)
+ &= R_j^\1 [J^\veC_{iv} - A_j \times \phi^\veC_{iv}]
+\end{align}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Quaternion}
+
+See equation (15) in the geometry notes for explaining the jacobian.
+\begin{align}
+\phi^\quat_{i}(q)
+ &= \text{quaternion}(\RO{W}{i})
+ && \text{quaternion $\in\RRR^4$} \\
+J^\quat_{i}(q)_{\cdot k}
+ &= \mat{c}{0 \\ \half (A_i)_{\cdot k}} \circ \phi^\quat_{i}(q)
+ && J^\quat_{i}(q)\in\RRR^{4 \times n} \\
+\phi^\quat_{i-j}(q)
+ &= \phi^\quat_{i} - \phi^\quat_{j}
+ && \text{difference $\in\RRR^4$} \\
+J^\quat_{i-j}(q)
+ &= J^\quat_{i} - J^\quat_{j} \\
+\phi^\quat_{i|j}(q)
+ &= (\phi^\quat_{j})^\1 \circ \phi^\quat_{i}
+ && \text{relative} \\
+J^\quat_{i|j}(q)
+ &= \text{not implemented}
+\end{align}
+
+A relative rotation can also be measured in terms of the 3D rotation
+vector. Lets define
+$$w(r) = \frac{2 \p}{\sin(\p)} \bar r \comma
+\p=\acos(r_0)$$
+as the rotation for a quaternion. We have
+\begin{align}
+\phi^\rotvec_{i|j}(q)
+ &= w(\phi^\quat_{j})^\1 \circ \phi^\quat_{i})
+ && \text{relative rotation vector $\in\RRR^3$} \\
+J^\rotvec_{i|j}(q)
+ &= AJ^\quat_{i} - J^\quat_{j} \\
+\end{align}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Alignment}
+
+parameters: shape indices $i,j$, attached vectors $v,w$
+
+$\phi^\text{align}_{iv|jw}(q) = (\phi^\veC_{jw})^\T~ \phi^\veC_{iv}$
+
+$J^\text{align}_{iv|jw}(q) = (\phi^\veC_{jw})^\T~ J^\veC_{iv} +\phi^\veC_{iv}{}^\T~ J^\veC_{jw}$
+
+Note: \quad $\phi^\text{align}=1 \oto $ align \quad $\phi^\text{align}=-1 \oto $ anti-align \quad $\phi^\text{align}=0 \oto $ orthog.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Gaze}
+
+2D orthogonality measure of object relative to camera plane
+
+parameters: eye index $i$ with offset $v$; target index $j$ with
+offset $w$
+
+\begin{align}
+\phi^\text{gaze}_{iv,jw}(q)
+ &= \mat{c}{
+\phi^\veC_{i,e_x}{}^\T (\phi^\pos_{jw} - \phi^\pos_{iv}) \\
+\phi^\veC_{i,e_y}{}^\T (\phi^\pos_{jw} - \phi^\pos_{iv}) } \quad\in\RRR^2
+\end{align}
+Here $e_x=(1,0,0)$ and $e_y=(0,1,0)$ are the camera plane axes.
+
+Jacobians straight-forward
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{qItself}
+
+$\phi^\text{qItself}_{iv,jw}(q) = q$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Joint limits measure}
+
+parameters: joint limits $q_{\text{low}}, q_{\text{hi}}$, margin $m$
+
+$\phi_{\text{limits}}(q) = \frac{1}{m}\sum_{i=1}^n [m-q_i+q_{\text{low}}]^+ + [m+q_i-q_{\text{hi}}]^+$
+
+$J_{\text{limits}}(q)_{1,i} = - \frac{1}{m}[m-q_i+q_{\text{low}}>0] + \frac{1}{m}[m+q_i-q_{\text{hi}}>0]$
+
+$[x]^+ = x>0\text{?}x:0$ \qquad $[\cdots]$: indicator function
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Collision limits measure}
+
+parameters: margin $m$
+
+$\phi_{\text{col}}(q) = \frac{1}{m}\sum_{k=1}^K [m-|p^a_k - p^b_k|]^+$
+
+$J_{\text{col}}(q) = \frac{1}{m} \sum_{k=1}^K [m-|p^a_k - p^b_k|>0]
+(- J^\pos_{p^a_k} + J^\pos_{p^b_k})^\T \frac{p^a_k - p^b_k}{|p^a_k - p^b_k|}$ 
+
+A collision detection engine returns a set $\{
+(a,b,p^a,p^b)_{k=1}^K \}$ of potential collisions between shape $a_k$
+and $b_k$, with nearest points $p^a_k$ on $a$ and $p^b_k$ on $b$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Shape distance measures (using SWIFT)}
+
+\begin{items}
+\item  allPTMT, //phi=sum over all proxies (as is standard)
+\item  listedVsListedPTMT, //phi=sum over all proxies between listed shapes
+\item  allVsListedPTMT, //phi=sum over all proxies against listed shapes
+\item  allExceptListedPTMT, //as above, but excluding listed shapes
+\item  bipartitePTMT, //sum over proxies between the two sets of shapes (shapes, shapes2)
+\item  pairsPTMT, //sum over proxies of explicitly listed pairs (shapes is n-times-2)
+\item  allExceptPairsPTMT, //sum excluding these pairs
+\item  vectorPTMT //vector of all pair proxies (this is the only case
+  where dim(phi)>1)
+\end{items}
+
+\paragraph{GJK pairwise shape distance (including negative)}
+
+\paragraph{Plane distance}
+
+\subsubsection{Application}
+
+Just get a glimpse on how task space definitions are used to script
+motions, here is a script of a little PR2 dance. (The 'logic' below
+the script implements kind of macros -- that's part of the RAP.)
+(\texttt{wheels} is the same as qItself, but refers only to the 3 base coordinates)
+
+\begin{shaded}
+\begin{Verbatim}[fontfamily=courier,fontsize=\tiny]
+cleanAll #this only declares a novel symbol...
+
+Script {
+  (FollowReferenceActivity wheels){ type=wheels, target=[0, .3, .2], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffR){ type=pos, ref2=base_footprint, target=[.2, -.5, 1.3], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffL){ type=pos, ref2=base_footprint, target=[.2, +.5, 1.3], PD=[.5, .9, .5, 10.]}
+  { (conv FollowReferenceActivity wheels)  (conv MyTask endeffR) }  #this waits for convergence of activities
+  (cleanAll) #this switches off the current activities
+  (cleanAll)! #this switches off the switching-off
+
+  (FollowReferenceActivity wheels){ type=wheels, target=[0, -.3, -.2], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffR){ type=pos, ref2=base_footprint, target=[.7, -.2, .7], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffL){ type=pos, ref2=base_footprint, target=[.7, +.2, .7], PD=[.5, .9, .5, 10.]}
+  { (conv FollowReferenceActivity wheels)  (conv MyTask endeffL) }
+  (cleanAll)
+  (cleanAll)!
+
+  (FollowReferenceActivity wheels){ type=wheels, target=[0, .3, .2], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffR){ type=pos, ref2=base_footprint, target=[.2, -.5, 1.3], PD=[.5, .9, .5, 10.]}
+  (MyTask endeffL){ type=pos, ref2=base_footprint, target=[.2, +.5, 1.3], PD=[.5, .9, .5, 10.]}
+  { (conv MyTask endeffL) }
+  (cleanAll)
+  (cleanAll)!
+
+  (FollowReferenceActivity wheels){ type=wheels, target=[0, 0, 0], PD=[.5, .9, .5, 10.]}
+  (HomingActivity)
+  { (conv HomingActivity) (conv FollowReferenceActivity wheels) }
+}
+
+
+Rule {
+    X, Y, 
+    { (cleanAll) (conv X Y) }
+    { (conv X Y)! }
+}
+
+Rule {
+    X, 
+    { (cleanAll) (MyTask X) }
+    { (MyTask X)! }
+}
+
+Rule {
+    X, 
+    { (cleanAll) (FollowReferenceActivity X) }
+    { (FollowReferenceActivity X)! }
+}
+\end{Verbatim}
+\end{shaded}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{KOMO}
+
+I do not introduce the KOMO concepts here. Read this\footnote{
+M. Toussaint: A tutorial on Newton methods for constrained trajectory
+optimization and relations to SLAM, Gaussian Process smoothing,
+optimal control, and probabilistic inference. In Geometric and
+Numerical Foundations of Movements, Springer, 2016.}
+\url{http://ipvs.informatik.uni-stuttgart.de/mlr/papers/16-toussaint-Newton.pdf} !
+
+The goal of the implementation is the separation between the code of
+optimizers and code to specify motion problems. The problem
+form \refeq{eqKOMO} provides the abstraction for that interface. The
+optimization methods all assume the general form
+\begin{align}\label{eqOpt}
+\min_x f(x) \st g(x)\le 0 \comma h(x) = 0
+\end{align}
+of a non-linear constrained optimization problem, with the additional
+assumption that the (approximate) Hessian $\he f(x)$ can be provided
+and is semi-pos-def. Therefore, the KOMO code essentially does the
+following
+\begin{itemize}
+\item Provide interfaces to define sets of $k$-order task spaces and
+costs/constraints in these task spaces at various time slices; which
+constitutes a MotionProblem. Such a MotionProblem definition is very
+semantic, referring to the kinematics of the robot.
+\item Abstracts and converts a MotionProblem definition into the general
+form \refeq{eqKOMO} using a kinematics engine. The resulting
+MotionProblemFunction is not semantic anymore and provides the
+interface to the generic optimization code.
+\item Converts the problem definition \refeq{eqKOMO} into the general
+forms \refeq{eqConstrained} and \refeq{eqOpt} using appropriate matrix packings
+to exploit the chain structure of the problem. This code does not
+refer to any robotics or kinematics anymore.
+\item Applies various optimizers. This is generic code.
+\end{itemize}
+
+The code introduces specialized matrix packings to exploit the
+structure of $J$ and to efficiently compute the banded matrix $J^\T
+J$. Note that the rows of $J$ have at most $(k+1)n$ non-zero elements
+since a row refers to exactly one task and depends only on one
+specific tuple $(x_{t-k},..,x_t)$. Therefore, although $J$ is
+generally a $D\times (T+1)n$ matrix (with $D=\sum_t \dim(f_t)$),
+each row can be packed to store only $(k+1)n$ non-zero elements. We
+introduced a \emph{row-shifted} matrix packing representation for
+this. Using specialized methods to compute $J^\T J$ and $J^\T x$ for
+any vector $x$ for the row-shifted packing, we can efficiently compute
+the banded Hessian and any other terms we need in Gauss-Newton
+methods.
+
+
+\subsection{Formal problem representation}
+
+The following definitions also document the API of the code.
+\begin{description}
+\item[KinematicEngine] is a mapping $\G:~ x \mapsto \G(x)$
+that maps a joint configuration to a data structure $\G(x)$ which
+allows to efficiently evaluate task maps. Typically $\G(x)$ stores
+the frames of all bodies/shapes/objects and collision
+information. More abstractly, $\G(x)$ is any data structure that is
+sufficient to define the task maps below.
+
+Note: In the code there is yet no abstraction KinematicEngine. Only
+one specific engine (KinematicWorld) is used. It would be
+straight-forward to introduce an abstraction for kinematic engines
+pin-pointing exactly their role for defining task maps.
+
+\item[TaskMap] is a mapping $\phi:~ (\G_{-k},..,\G_0) \mapsto
+(y,J)$ which gets $k+1$ kinematic data structures as input and returns
+some vector $y\in\RRR^d$ and (on request) its Jacobian $J\in\RRR(d\times n)$.
+
+\item[Task] is a tuple $c=(\phi, \r_{1:T},
+ y^*_{1:T},\textsf{tt})$ where $\phi$ is a TaskMap and the
+parameters $\r_{1:T},y^*_{1:T} \in\RRR^{T\times d}$ allow for an
+additional linear transformation in each time slice. Here,
+$d=\dim(\phi)$ is the dimensionality of the task map. This defines the
+transformed task map
+\begin{align}
+\hat\phi_t(x_{t-k},..,x_t)
+& = \diag(\r_t) (\phi(\G(x_{t-k}),..,\G(x_t)) - y^*_t) ~,
+\end{align}
+which depending on $\textsf{tt}\in\{\textsf{fTT, sumOfSqrTT, ineqT, eqT}\}$ is
+interpreted as cost or constraint feature. Note that, in the cost case,
+$y^*_{1:T}$ has the semantics of a reference target for the task
+variable, and $\r^*_{1:T}$ of a precision. In the code,
+$\r_{1:T},y^*_{1:T}$ may optionally be given as $1\times 1$, $1\times
+T\po$, $d\times 1$, or $d\times T\po$ matrices---and are interpreted
+constant along the missing dimensions.
+
+\item[MotionProblem] is a tuple $(T,\CC,x_{-k+1:0})$ which gives
+the number of time steps, a list $\CC=\{c_i\}$ of Tasks, and
+a \emph{prefix} $x_{-k:-1} \in\RRR^{k\times n}$. The prefix allows to
+evaluate tasks also for time $t\le k$, where the prefix defines the
+kinematic configurations $\G(x_{-k+1}),..,\G(x_0)$ at negative
+times. This defines the KOMO problem.
+
+\end{description}
+
+
+
+
+\subsection{User Interfaces}
+
+\subsubsection{Easy}
+
+For convenience there is a single high-level method to call the
+optimization, defined in @<Motion/komo.h>@
+\begin{code}
+\begin{verbatim}
+/// Return a trajectory that moves the endeffector to a desired target position
+arr moveTo(ors::KinematicWorld& world, //in initial state
+           ors::Shape& endeff,         //endeffector to be moved
+           ors::Shape& target,         //target shape
+           byte whichAxesToAlign=0,    //bit coded options to align axes
+           uint iterate=1);            //usually the optimization methods may be called just
+                                       //once; multiple calls -> safety
+\end{verbatim}
+\end{code}
+The method returns an optimized joint space trajectory so that the
+endeff reaches the target. Optionally the optimizer additionaly
+aligns some axes between the coordinate frames. This is just one
+typical use case; others would include constraining vector-alignments
+to zero (orthogonal) instead of +1 (parallel), or directly specifying
+quaternions, or using many other existing task maps. See expert
+interface.
+
+This interface specifies the relevant coordinate frames by referring
+to Shapes. Shapes (@ors::Shape@) are rigidly attached to bodies
+(``links'') and usually represent a (convex) collision
+mesh/primitive. However, a Shape can also just be a marker frame
+(@ShapeType markerST=5@), in which case it is just a convenience to
+define reference frames attached to bodies. So, the best way to
+determine the geometric parameters of the endeffector and target
+(offsets, relative orientations etc) is by transforming the respective
+shape frames (@Shape::rel@).
+
+The method uses implicit parameters (grabbed from cfg file or command line or default):
+\begin{code}
+\begin{verbatim}
+  double posPrec = MT::getParameter<double>("KOMO/moveTo/precision", 1e3);
+  double colPrec = MT::getParameter<double>("KOMO/moveTo/collisionPrecision", -1e0);
+  double margin = MT::getParameter<double>("KOMO/moveTo/collisionMargin", .1);
+  double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
+  double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e3);
+\end{verbatim}
+\end{code}
+
+
+\subsubsection{Using a specs file}
+
+Example:
+\begin{code}
+\begin{verbatim}
+KOMO{
+  T = 100
+  duration = 5
+}
+
+Task sqrAccelerations{
+  map={ type=qItself }
+  order=2    # accelerations (default is 0)
+  time=[0 1] # from start to end (default is [0 1])
+  type=cost  # squared costs (default is 'cost')
+  scale=1    # factor of the map (default is [1])
+  target=[0] # offset of the map (default is [0])
+}
+
+Task finalHandPosition{
+  map={ type=pos ref1=hand ref2=obj vec1=[0 0 .1] }
+  time=[1 1] # only final
+  type=equal # hard equality constraint
+}
+
+Task finalAlignmentPosition{
+  map={ type=vecAlign ref1=hand vec1=[1 0 0] vec2=[0 1 0]}
+  time=[1 1] # only final
+  type=equal # hard equality constraint
+  target=[1] # scalar product between vec1@hand and vec2@world shall be 1
+}
+
+Task collisions{
+  map={ type=collisionIneq margin=0.05 }
+  type=inEq # hard inequality constraint
+}
+\end{verbatim}
+\end{code}
+
+
+
+\subsubsection{Expert using the included kinematics engine}
+
+See the implementation of @moveTo@! This really is the core guide to
+build your own cost functions.
+
+More generically, if the user would like to implement new TaskMaps or
+use some of the existing ones:
+\begin{itemize}
+\item The user can define new $k$-order task maps by instantiating the
+abstraction. There exist a number of predefined task maps. The
+specification of a task map usually has only a few parameters like
+``which endeffector shape(s) are you referring to''. Typically, a good
+convention is to define task maps in a way such that \emph{zero} is a
+desired state or the constraint boundary, such as relative
+coordinates, alignments or orientation. (But that is not necessary,
+see the linear transformation below.)
+
+\item To define an optimization problem, the user creates a list of
+tasks, where each task is defined by a task map and parameters that
+define how the map is interpreted as a) a cost term or b) an inequality
+constraint. This interpretation allows: a linear
+transformation separately for each $t$ (=setting a reference/target
+and precision); how maps imply a constraint. This interpretation has a
+significant number of parameters: for each time slice different
+targets/precisions could be defined.
+\end{itemize}
+
+
+\subsubsection{Expert with own kinematics engine}
+
+The code needs a data structure $\G(q_t)$ to represent the
+(kinematic) state $q_t$, where coordinate frames of all
+bodies/shapes/objects have been precomputed so that evaluation of task
+maps is fast. Currently this is @KinematicWorld@.
+
+Users that prefer using the own kinematics engine can instantiate the
+abstraction. Note that the engine needs to fulfill two roles: it must
+have a @setJointState@ method that also precomputes all frames of all
+bodies/shapes/objects. And it must be siffucient as argument of your
+task map instantiations.
+
+\subsubsection{Optimizers}
+
+The user can also only use the optimizers, directly instantiating the
+$k$-order Markov problem abstraction; or, yet a level below, directly
+instantiating the @ConstrainedProblem@ abstraction. Examples are given
+in @examples/Optim/kOrderMarkov@ and
+@examples/Optim/constrained@. Have a look at the specific
+implementations of the benchmark problems, esp.\ the
+@ParticleAroundWalls@ problem.
+
+\subsubsection{Parameters \& Reporting}
+
+Every run of the code generates a MT.log file, which tells about every
+parameter that was internally used. You can overwrite any of these
+parameters on command line or in an MT.cfg file.
+
+Inspecting the cost report after an optimization is
+important. Currently, the code goes through the task list $\CC$ and
+reports for each the costs associated to it. There are also methods to
+display the cost arising in the different tasks over time.
+
+
+%% \subsection{Special Cases}
+
+%% \subsubsection{``True'' dynamics for fully articulated systems}
+
+%% %% penalize $u = M\ddot q + C\dot q + G$
+
+%% %% Our kinematics: no efficient implementation of C!! Approximate $C\dot q
+%% %% + G = F$ indep of $\dot q$; and all terms indep of $q$!!
+
+%% \subsubsection{Jerk optimization: 3-order}
+
+%% \subsubsection{Gaussian Process priors: kernel regularization}\label{secKernel}
+
+%% \subsubsection{Inverse Kinematics: 1-order 1-step}
+
+%% \subsubsection{Operational Space Control: 2-order 1-step}
+
+%% \subsubsection{Endpose Optimization: 2-order 1-step}
+
+%% \subsubsection{Multipose Optimization}
+
+
+%% \subsection{Time Optimization}
+
+\subsection{Potential Improvements}
+
+There is many places the code code be improved (beyond documenting it
+better):
+\begin{items}
+\item The KinematicEngine should be abstracted to allow for easier
+plugin of alternative engines.
+
+\item Our kinematics engine uses SWIFT++ for proximity and penetration
+computation. The methods would profit enormously from better (faster,
+more accurate) proximity engines (signed distance functions, sphere-swept
+primitives).
+\end{items}
+
+\subsection{Disclaimer}
+
+This document by no means aims to document all aspects of the code,
+esp.\ those relating to the used kinematics engine etc. It only tries
+to introduce to the concepts and design decisions behind the KOMO
+code.
+
+More documentation of optimization and kinematics concepts used in the
+code can be drawn from my teaching lectures on Optimization and
+Robotics.
+
+
+\end{document}
