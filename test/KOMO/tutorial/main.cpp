@@ -33,12 +33,13 @@ void tutorialBasics(){
   komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
 
   //in phase-time [1,\infty] quaternion-difference between "baxterR" and "target" shall be zero (sumOfSqr objective)
-  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector,
-                                            "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
   //I don't recomment setting quaternion tasks! This is only for testing here. Instead, use alignment tasks as in test/KOMO/komo
 
+  komo.setTask(1., -1., new TaskMap_Default(vecDiffTMT, komo.world, "baxterL", -Vector_z, NULL, Vector_x));
+
   //slow down around phase-time 1. (not measured in seconds, but phase)
-  komo.setSlowAround(1., .1, 1e3);
+//  komo.setSlowAround(1., .1, 1e3);
 
   //-- call the optimizer
   komo.reset();
@@ -72,6 +73,25 @@ void tutorialBasics(){
 
 //===========================================================================
 
+void tutorialBasics_short(){
+  mlr::KinematicWorld G("model.g");
+
+  KOMO komo;
+  komo.setModel(G, false);
+  komo.setPathOpt(2., 20);
+
+  komo.setTask(1., -1., new TaskMap_Default(posDiffTMT,  komo.world, "baxterR", NoVector, "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(vecDiffTMT,  komo.world, "baxterL", -Vector_z, NULL, Vector_x));
+
+  komo.reset();
+  komo.run();
+  komo.getReport(true); //true -> plot the cost curves
+  for(uint i=0;i<2;i++) komo.displayTrajectory(.1, true); //play the trajectory
+}
+
+//===========================================================================
+
 void tutorialInverseKinematics(){
   /* The only difference is that the timing parameters are set differently and the tranision
    * costs need to be velocities (which is just sumOfSqr of the difference to initialization).
@@ -90,16 +110,14 @@ void tutorialInverseKinematics(){
   komo.setSquaredQVelocities();
   komo.setSquaredQuaternionNorms(-1., -1., 1e3); //when the kinematics includes quaternion joints, keep them roughly regularized
 
-  //-- simple tasks, called low-level
   komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
-  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector,
-                                            "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(vecDiffTMT, komo.world, "baxterL", -Vector_z, NULL, Vector_x));
 
   //-- call the optimizer
   komo.reset();
   komo.run();
-  //  komo.checkGradients(); //this checks all gradients of the problem by finite difference
-  komo.getReport(); //true -> plot the cost curves
+  cout <<komo.getReport(); //true -> plot the cost curves
   for(uint i=0;i<2;i++) komo.displayTrajectory(.1, true); //play the trajectory
 }
 
@@ -108,7 +126,9 @@ void tutorialInverseKinematics(){
 int main(int argc,char** argv){
   mlr::initCmdLine(argc,argv);
 
-  tutorialBasics();
+//  tutorialBasics();
+
+  tutorialBasics_short();
 
   tutorialInverseKinematics();
 
