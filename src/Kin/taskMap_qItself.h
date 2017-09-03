@@ -26,11 +26,6 @@ struct TaskMap_qItself:TaskMap {
   bool moduloTwoPi; ///< if false, consider multiple turns of a joint as different q values (Default: true)
   bool relative_q0; ///< if true, absolute values are given relative to Joint::q0
 
-//  TaskMap_qItself(uint singleQ, uint qN); ///< The singleQ parameter generates a matrix M that picks out a single q value
-//  TaskMap_qItself(const mlr::KinematicWorld& G, mlr::Joint* j);
-//  TaskMap_qItself(const mlr::KinematicWorld& G, const char* jointName);
-//  TaskMap_qItself(const mlr::KinematicWorld& G, const char* jointName1, const char* jointName2);
-
   TaskMap_qItself(bool relative_q0=false);
   TaskMap_qItself(TaskMap_qItself_PickMode pickMode, const StringA& picks, const mlr::KinematicWorld& G, bool relative_q0=false);
   TaskMap_qItself(uintA _selectedBodies, bool relative_q0=false);
@@ -61,5 +56,5 @@ private:
 
 mlr::Array<mlr::Joint*> getMatchingJoints(const WorldL& G, bool zeroVelJointsOnly);
 mlr::Array<mlr::Joint*> getSwitchedJoints(const mlr::KinematicWorld& G0, const mlr::KinematicWorld& G1, int verbose=0);
-mlr::Array<mlr::Body*> getSwitchedBodies(const mlr::KinematicWorld& G0, const mlr::KinematicWorld& G1, int verbose=0);
+mlr::Array<mlr::Frame*> getSwitchedBodies(const mlr::KinematicWorld& G0, const mlr::KinematicWorld& G1, int verbose=0);
 

@@ -18,10 +18,11 @@
 #include <Core/thread.h>
 #include <Gui/opengl.h>
 #include "kin.h"
+#include <Geo/mesh.h>
 
 //===========================================================================
 
-void renderConfigurations(const WorldL& cs, const char* filePrefix, int tprefix=0, int w=-1, int h=-1);
+void renderConfigurations(const WorldL& cs, const char* filePrefix="vid/z.path.", int tprefix=0, int w=-1, int h=-1, mlr::Camera *camera=NULL);
 
 //===========================================================================
 

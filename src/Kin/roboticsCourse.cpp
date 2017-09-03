@@ -36,8 +36,8 @@ struct sSimulator {
 };
 
 void Simulator::anchorKinematicChainIn(const char* bodyName){
-  s->G.reconfigureRoot(s->G.getBodyByName(bodyName));
-  s->G.calc_fwdPropagateFrames();
+  s->G.reconfigureRoot(s->G.getFrameByName(bodyName));
+//  s->G.calc_fwdPropagateFrames();
   
   NIY;
 //  if(s->G.swift().isOpen){
@@ -66,7 +66,7 @@ Simulator::Simulator(const char* orsFile){
     }*/
   
   //G.makeLinkTree();
-  makeConvexHulls(s->G.shapes);
+  makeConvexHulls(s->G.frames);
 
   //OPENGL
   s->G.gl().add(glDrawPlot, &plotModule);
@@ -114,36 +114,36 @@ void Simulator::setJointAnglesAndVels(const arr& q, const arr& qdot, bool update
 void Simulator::kinematicsPos(arr& y, const char* shapeName, const arr* rel){
   if(rel){
     mlr::Vector v;  v.set(rel->p);
-    s->G.kinematicsPos(y, NoArr, s->G.getShapeByName(shapeName)->body, v);
+    s->G.kinematicsPos(y, NoArr, s->G.getFrameByName(shapeName), v);
   }else{
-    s->G.kinematicsPos(y, NoArr, s->G.getShapeByName(shapeName)->body);
+    s->G.kinematicsPos(y, NoArr, s->G.getFrameByName(shapeName));
   }
 }
 
 void Simulator::kinematicsVec(arr& y, const char* shapeName, const arr* vec){
   if(vec){
     mlr::Vector v;  v.set(vec->p);
-    s->G.kinematicsVec(y, NoArr, s->G.getShapeByName(shapeName)->body, v);
+    s->G.kinematicsVec(y, NoArr, s->G.getFrameByName(shapeName), v);
   }else{
-    s->G.kinematicsVec(y, NoArr, s->G.getShapeByName(shapeName)->body);
+    s->G.kinematicsVec(y, NoArr, s->G.getFrameByName(shapeName));
   }
 }
 
 void Simulator::jacobianPos(arr& J, const char* shapeName, const arr* rel){
   if(rel){
     mlr::Vector v;  v.set(rel->p);
-    s->G.kinematicsPos(NoArr, J, s->G.getShapeByName(shapeName)->body, v);
+    s->G.kinematicsPos(NoArr, J, s->G.getFrameByName(shapeName), v);
   }else{
-    s->G.kinematicsPos(NoArr, J, s->G.getShapeByName(shapeName)->body);
+    s->G.kinematicsPos(NoArr, J, s->G.getFrameByName(shapeName));
   }
 }
 
 void Simulator::jacobianVec(arr& J, const char* shapeName, const arr* vec){
   if(vec){
     mlr::Vector v;  v.set(vec->p);
-    s->G.kinematicsVec(NoArr, J, s->G.getShapeByName(shapeName)->body, v);
+    s->G.kinematicsVec(NoArr, J, s->G.getFrameByName(shapeName), v);
   }else{
-    s->G.kinematicsVec(NoArr, J, s->G.getShapeByName(shapeName)->body);
+    s->G.kinematicsVec(NoArr, J, s->G.getFrameByName(shapeName));
   }
 }
 

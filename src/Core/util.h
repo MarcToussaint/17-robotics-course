@@ -335,7 +335,7 @@ extern String errString;
 }
 
 //----- error handling:
-#  define MLR_HERE "@" << __FILE__<<':' <<__FUNCTION__ <<':' <<__LINE__ <<": "
+#  define MLR_HERE "@" << __FILE__<<':' <<__FUNCTION__ <<':' <<__LINE__ <<":" <<mlr::realTime() <<"s "
 
 #ifndef HALT
 #  define MLR_MSG(msg){ LOG(-1) <<msg; }
@@ -473,10 +473,11 @@ namespace mlr {
       }
       CHECK(!strcmp(names[x], str.p), "");
     }
-    void write(std::ostream& os) const{
-      if(x<0) os <<"init";
-      else os <<names[x];
+    const char* name() const{
+        if(x<0) return "init";
+        else return names[x];
     }
+    void write(std::ostream& os) const{ os <<name(); }
   };
   template<class T> std::istream& operator>>(std::istream& is, Enum<T>& x){ x.read(is); return is; }
   template<class T> std::ostream& operator<<(std::ostream& os, const Enum<T>& x){ x.write(os); return os; }
@@ -501,7 +502,7 @@ private:
   
 public:
   /// ...
-  Rnd() { ready=false; };
+  Rnd() { ready=false; }
   
   
 public:/// @name initialization
@@ -565,10 +566,10 @@ struct Inotify{
   mlr::FileToken *fil;
   Inotify(const char *filename);
   ~Inotify();
-  bool pollForModification(bool block=false, bool verbose=false);
+  bool poll(bool block=false, bool verbose=false);
 
-  void waitAndReport(){ pollForModification(false, true); }
-  void waitForModification(bool verbose=false){ while(!pollForModification(true, verbose)); }
+//  void waitAndReport(){ pollForModification(false, true); }
+//  void waitForModification(bool verbose=false){ while(!pollForModification(true, verbose)); }
 };
 
 

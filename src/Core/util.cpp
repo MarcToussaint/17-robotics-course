@@ -1215,10 +1215,10 @@ Inotify::~Inotify(){
   delete fil;
 }
 
-bool Inotify::pollForModification(bool block, bool verbose){
+bool Inotify::poll(bool block, bool verbose){
   if(!block){
     struct pollfd fd_poll = {fd, POLLIN, 0};
-    int r = poll(&fd_poll, 1, 0);
+    int r = ::poll(&fd_poll, 1, 0);
     CHECK(r>=0,"poll failed");
     if(!r) return false;
   }
@@ -1248,8 +1248,9 @@ bool Inotify::pollForModification(bool block, bool verbose){
       }
     }
     if(event->len
-       && (event->mask & (IN_MODIFY|IN_CREATE|IN_DELETE))
-       && !strcmp(event->name, fil->name.p) ) return true; //report modification on specific file
+            && (event->mask & (IN_MODIFY|IN_CREATE|IN_DELETE))
+            && !strncmp(event->name, fil->name.p, fil->name.N)
+            ) return true; //report modification on specific file
     i += sizeof(struct inotify_event) + event->len;
   }
 

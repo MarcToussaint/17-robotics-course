@@ -125,7 +125,7 @@ void Node::write(std::ostream& os) const {
     os <<'(';
     for_list(Node, it, parents) {
       if(it_COUNT) os <<' ';
-      if(it->keys.N){
+      if(it->keys.N && it->keys.last().N){
         os <<it->keys.last();
       }else{  //relative numerical reference
         os <<(int)it->index - (int)index;
@@ -621,6 +621,10 @@ Node* Graph::readNode(std::istream& is, bool verbose, bool parseInfo, mlr::Strin
         node = newNode<arr>(keys, parents, reals);
       } break;
       case '<': { //any type parser
+#if 0
+        str.read(is, "", ">", true);
+        node = newNode<mlr::String>(keys, parents, str);
+#else
         str.read(is, " \t", " \t\n\r()`-=~!@#$%^&*()+[]{};'\\:|,./<>?", false);
         //      str.read(is, " \t", " \t\n\r()`1234567890-=~!@#$%^&*()_+[]{};'\\:|,./<>?", false);
         node = readTypeIntoNode(*this, str, is);
@@ -636,6 +640,7 @@ Node* Graph::readNode(std::istream& is, bool verbose, bool parseInfo, mlr::Strin
           node->parents = parents;
         }
         mlr::parse(is, ">");
+#endif
       } break;
       case '{': { // sub graph
         Node_typed<Graph> *subgraph = this->newSubgraph(keys, parents);
@@ -784,7 +789,8 @@ void Graph::writeDot(std::ostream& os, bool withoutHeader, bool defaultEdges, in
       os <<n->parents(0)->index <<" -> " <<n->parents(1)->index <<" [ " <<label <<"];" <<endl;
     }else{
       if(n->isGraph()){
-        os <<"subgraph cluster_" <<n->index <<" { " <<label /*<<" rank=same"*/ <<endl;
+        os <<"subgraph cluster_" <<n->index <<" { " /*<<" rank=same"*/ <<endl;
+        os <<n->index <<" [ " <<label <<" shape=box ];" <<endl;
         n->graph().writeDot(os, true, defaultEdges, +1);
         os <<"}" <<endl;
         n->graph().writeDot(os, true, defaultEdges, -1);
@@ -792,17 +798,17 @@ void Graph::writeDot(std::ostream& os, bool withoutHeader, bool defaultEdges, in
         if(nodesOrEdges>=0){
           os <<n->index <<" [ " <<label <<shape <<" ];" <<endl;
         }
-        if(nodesOrEdges<=0){
+      }
+      if(nodesOrEdges<=0){
           for_list(Node, pa, n->parents) {
-            if(hasRenderingInfo(pa) && getRenderingInfo(pa).skip) continue;
-            if(pa->index<n->index)
-              os <<pa->index <<" -> " <<n->index <<" [ ";
-            else
-              os <<n->index <<" -> " <<pa->index <<" [ ";
-            os <<"label=" <<pa_COUNT;
-            os <<" ];" <<endl;
+              if(hasRenderingInfo(pa) && getRenderingInfo(pa).skip) continue;
+//              if(pa->index<n->index)
+                  os <<pa->index <<" -> " <<n->index <<" [ ";
+//              else
+//                  os <<n->index <<" -> " <<pa->index <<" [ ";
+              os <<"label=" <<pa_COUNT;
+              os <<" ];" <<endl;
           }
-        }
       }
     }
   }

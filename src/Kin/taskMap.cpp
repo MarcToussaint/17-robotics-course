@@ -17,6 +17,7 @@
 #include "taskMap_qItself.h"
 #include "taskMap_GJK.h"
 #include "taskMap_FixSwitchedObjects.h"
+#include "frame.h"
 
 //===========================================================================
 
@@ -128,7 +129,7 @@ TaskMap *TaskMap::newTaskMap(const Graph& params, const mlr::KinematicWorld& wor
     if(params["ref1"] && params["ref2"]){
       mlr::Joint *j=world.getJointByBodyNames(params.get<mlr::String>("ref1"), params.get<mlr::String>("ref2"));
       if(!j) return NULL;
-      map = new TaskMap_qItself({j->to->index}, false);
+      map = new TaskMap_qItself({j->to()->ID}, false);
     }else if(params["ref1"]) map = new TaskMap_qItself(QIP_byJointNames, {params.get<mlr::String>("ref1")}, world);
     else if(params["Hmetric"]){ NIY /* map = new TaskMap_qItself(params.get<double>("Hmetric")*world.getHmetric());*/ } //world.naturalQmetric()); //
     else map = new TaskMap_qItself();
@@ -169,30 +170,25 @@ TaskMap *TaskMap::newTaskMap(const Node* specs, const mlr::KinematicWorld& world
   }else if(type=="collisionPairs"){
     uintA shapes;
     for(uint i=2;i<specs->parents.N;i++){
-      mlr::Shape *s = world.getShapeByName(specs->parents(i)->keys.last());
+      mlr::Frame *s = world.getFrameByName(specs->parents(i)->keys.last());
       CHECK(s,"No Shape '" <<specs->parents(i)->keys.last() <<"'");
-      shapes.append(s->index);
+      shapes.append(s->ID);
     }
     map = new TaskMap_ProxyConstraint(pairsPTMT, shapes, (params?params->get<double>("margin", 0.1):0.1));
   }else if(type=="collisionExceptPairs"){
     uintA shapes;
     for(uint i=2;i<specs->parents.N;i++){
-      mlr::Shape *s = world.getShapeByName(specs->parents(i)->keys.last());
+      mlr::Frame *s = world.getFrameByName(specs->parents(i)->keys.last());
       CHECK(s,"No Shape '" <<specs->parents(i)->keys.last() <<"'");
-      shapes.append(s->index);
+      shapes.append(s->ID);
     }
     map = new TaskMap_ProxyConstraint(allExceptPairsPTMT, shapes, (params?params->get<double>("margin", 0.1):0.1));
   }else if(type=="collisionExcept"){
     uintA shapes;
     for(uint i=2;i<specs->parents.N;i++){
-      mlr::Shape *s = world.getShapeByName(specs->parents(i)->keys.last());
-      if(!s){
-        mlr::Body *b = world.getBodyByName(specs->parents(i)->keys.last());
-        CHECK(b,"No shape or body '" <<specs->parents(i)->keys.last() <<"'");
-        for(mlr::Shape *s:b->shapes) shapes.append(s->index);
-      }else{
-        shapes.append(s->index);
-      }
+      mlr::Frame *s = world.getFrameByName(specs->parents(i)->keys.last());
+      CHECK(s, "No shape or body '" <<specs->parents(i)->keys.last() <<"'");
+      shapes.append(s->ID);
     }
     map = new TaskMap_ProxyConstraint(allExceptListedPTMT, shapes, (params?params->get<double>("margin", 0.1):0.1));
   }else if(type=="proxy"){
@@ -201,7 +197,7 @@ TaskMap *TaskMap::newTaskMap(const Node* specs, const mlr::KinematicWorld& world
     if(ref1 && ref2){
       mlr::Joint *j=world.getJointByBodyNames(ref1, ref2);
       if(!j) return NULL;
-      map = new TaskMap_qItself({j->to->index}, false);
+      map = new TaskMap_qItself({j->to()->ID}, false);
     }else if(ref1) map = new TaskMap_qItself(QIP_byJointNames, {ref1}, world);
     else if(params && params->getNode("Hmetric")){ NIY /*map = new TaskMap_qItself(params->getNode("Hmetric")->get<double>()*world.getHmetric()); */}//world.naturalQmetric()); //
     else if(params && params->getNode("relative")) map = new TaskMap_qItself(true); //world.naturalQmetric()); //

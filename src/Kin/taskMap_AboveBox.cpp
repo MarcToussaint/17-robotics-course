@@ -14,40 +14,45 @@
 
 
 #include "taskMap_AboveBox.h"
+#include "frame.h"
 
 TaskMap_AboveBox::TaskMap_AboveBox(int iShape, int jShape)
-  : i(iShape), j(jShape){
+  : i(iShape), j(jShape), margin(.01){
 }
 
-
 TaskMap_AboveBox::TaskMap_AboveBox(const mlr::KinematicWorld& G, const char* iShapeName, const char* jShapeName)
-  :i(-1), j(-1){
-  mlr::Shape *a = iShapeName ? G.getShapeByName(iShapeName):NULL;
-  mlr::Shape *b = jShapeName ? G.getShapeByName(jShapeName):NULL;
-  if(a) i=a->index;
-  if(b) j=b->index;
+  :i(-1), j(-1), margin(.01){
+  mlr::Frame *a = iShapeName ? G.getFrameByName(iShapeName):NULL;
+  mlr::Frame *b = jShapeName ? G.getFrameByName(jShapeName):NULL;
+  if(a) i=a->ID;
+  if(b) j=b->ID;
 }
 
 void TaskMap_AboveBox::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
-  mlr::Shape *s1=G.shapes(i);
-  mlr::Shape *s2=G.shapes(j);
-  if(s2->type!=mlr::ST_ssBox){ //switch roles
-    mlr::Shape *z=s1;
-    s1=s2; s2=z;
-  }
-  CHECK(s2->type==mlr::ST_ssBox,"");//s1 should be the board
+  mlr::Shape *pnt=G.frames(i)->shape;
+  mlr::Shape *box=G.frames(j)->shape;
+  CHECK(pnt && box,"I need shapes!");
+//  if(box->type!=mlr::ST_ssBox){ //switch roles
+//    mlr::Shape *z=pnt;
+//    pnt=box; box=z;
+//  }
+  CHECK(box->type==mlr::ST_ssBox,"the 2nd shape needs to be a box"); //s1 should be the board
   arr pos,posJ;
-  G.kinematicsRelPos(pos, posJ, s1->body, s1->rel.pos, s2->body, s2->rel.pos);
+  G.kinematicsRelPos(pos, posJ, pnt->frame, NoVector, box->frame, NoVector);
+#if 0
   arr range(3);
-  double d1 = .5*s1->size(0) + s1->size(3);
+  double d1 = .5*pnt->size(0) + pnt->size(3);
   d1 =.05; //TODO: fixed! support size/radius of object on top
-  double d2 = .5*s2->size(0) + s2->size(3);
+  double d2 = .5*box->size(0) + box->size(3);
   range(0) = fabs(d1 - d2);
-  d1 = .5*s1->size(1) + s1->size(3);
+  d1 = .5*pnt->size(1) + pnt->size(3);
   d1 =.05; //TODO: fixed! support size/radius of object on top
-  d2 = .5*s2->size(1) + s2->size(3);
+  d2 = .5*box->size(1) + box->size(3);
   range(1) = fabs(d1 - d2);
   range(2)=0.;
+#else
+  arr range = { .5*box->size(0)-margin, .5*box->size(1)-margin };
+#endif
 //  if(verbose>2) cout <<pos <<range
 //                    <<pos-range <<-pos-range
 //                   <<"\n 10=" <<s1->size(0)
@@ -67,4 +72,8 @@ void TaskMap_AboveBox::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
     J[2] =  posJ[1];
     J[3] = -posJ[1];
   }
+}
+
+mlr::String TaskMap_AboveBox::shortTag(const mlr::KinematicWorld &G){
+  return STRING("AboveBox:"<<(i<0?"WORLD":G.frames(i)->name) <<':' <<(j<0?"WORLD":G.frames(j)->name));
 }

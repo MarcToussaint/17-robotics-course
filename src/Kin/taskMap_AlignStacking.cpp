@@ -14,6 +14,7 @@
 
 
 #include "taskMap_AlignStacking.h"
+#include "frame.h"
 
 TaskMap_AlignStacking::TaskMap_AlignStacking(int iShape)
   : i(iShape){
@@ -22,18 +23,17 @@ TaskMap_AlignStacking::TaskMap_AlignStacking(int iShape)
 
 TaskMap_AlignStacking::TaskMap_AlignStacking(const mlr::KinematicWorld& G, const char* iShapeName)
   :i(-1){
-  mlr::Shape *a = iShapeName ? G.getShapeByName(iShapeName):NULL;
-  if(a) i=a->index;
+  mlr::Frame *a = iShapeName ? G.getFrameByName(iShapeName):NULL;
+  if(a) i=a->ID;
 }
 
 void TaskMap_AlignStacking::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
-  mlr::Shape *s=G.shapes(i);
-  mlr::Body *b=s->body;
+  mlr::Frame *b=G.frames(i);
 
-  mlr::Joint *j=b->inLinks.first();
+  mlr::Joint *j=b->joint();
   CHECK(j,"has no support??");
 
-  mlr::Body *b_support=j->from;
+  mlr::Frame *b_support = j->from();
 
 #if 0//if there were multiple supporters
   uint n=G.getJointStateDimension();
@@ -78,4 +78,8 @@ void TaskMap_AlignStacking::phi(arr& y, arr& J, const mlr::KinematicWorld& G, in
   if(&J) J = (J1-J2)({0,1});
 
 #endif
+}
+
+mlr::String TaskMap_AlignStacking::shortTag(const mlr::KinematicWorld &G){
+  return STRING("AlignStacking:"<<(i<0?"WORLD":G.frames(i)->name));
 }

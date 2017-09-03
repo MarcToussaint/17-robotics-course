@@ -21,10 +21,8 @@
 struct TaskMap_LinTrans : TaskMap {
   TaskMap *map;
   arr A,a;
-  bool norm;
 
   TaskMap_LinTrans(TaskMap *map, const arr& A, const arr& a) : map(map), A(A), a(a){}
-  TaskMap_LinTrans(TaskMap *map, bool _norm) : map(map), norm(_norm){}
 
   virtual void phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t=-1);
   virtual uint dim_phi(const mlr::KinematicWorld& G);

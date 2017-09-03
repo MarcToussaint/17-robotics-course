@@ -2774,6 +2774,17 @@ template<class T> mlr::Array<T> elemWiseMax(const T& v, const mlr::Array<T>& w) 
   return z;
 }
 
+template<class T> void writeConsecutiveConstant(std::ostream &os, const mlr::Array<T> &x){
+    uint yi=0;
+    T y=x.elem(yi);
+    for(uint i=1;i<x.N-1;i++) if(x.elem(i)!=y){
+        os <<'(' <<yi <<".." <<i-1 <<')' <<y <<' ';
+        yi=i;
+        y = x.elem(yi);
+    }
+    os <<'(' <<yi <<".." <<x.N-1 <<')' <<y;
+}
+
 //===========================================================================
 //
 /// @name tensor operations
@@ -3732,7 +3743,7 @@ template<class T> void listDelete(mlr::Array<T*>& L) {
 }
 
 template<class T> void listReindex(mlr::Array<T*>& L) {
-  for(uint i=0;i<L.N;i++) L.elem(i)->index=i;
+  for(uint i=0;i<L.N;i++) L.elem(i)->ID=i;
 }
 
 template<class T> T* listFindByName(const mlr::Array<T*>& L, const char* name) {
@@ -4007,6 +4018,8 @@ template<class vert, class edge> void graphWriteUndirected(std::ostream& os, con
 }
 
 template<class vert, class edge> bool graphTopsort(mlr::Array<vert*>& V, mlr::Array<edge*>& E) {
+    NIY;
+#if 0
   mlr::Array<vert*> noInputs;
   noInputs.memMove=true;
   uintA newIndex(V.N);
@@ -4017,7 +4030,7 @@ template<class vert, class edge> bool graphTopsort(mlr::Array<vert*>& V, mlr::Ar
   for_list(vert,  v,  V) v->index = v_COUNT;
 
   for(vert *v:V) {
-    inputs(v->index)=v->inLinks.N;
+    inputs(v->index)=v->numInputs(); //inLinks.N;
     if(!inputs(v->index)) noInputs.append(v);
   }
   
@@ -4042,30 +4055,30 @@ template<class vert, class edge> bool graphTopsort(mlr::Array<vert*>& V, mlr::Ar
   for(vert *v:V) for(edge *e:v->outLinks) newIndex(e->index)=count++;
   E.permuteInv(newIndex);
   for_list(edge, e, E) e->index=e_COUNT;
-
+#endif
   return true;
 }
 
-template<class vert, class edge> mlr::Array<vert*> graphGetTopsortOrder(mlr::Array<vert*>& V, mlr::Array<edge*>& E) {
-  mlr::Array<vert*> noInputs;
+template<class vert> mlr::Array<vert*> graphGetTopsortOrder(mlr::Array<vert*>& V) {
+  mlr::Array<vert*> fringe;
   mlr::Array<vert*>::memMove=true;
   intA inputs(V.N);
   mlr::Array<vert*> order;
 
-  for_list(vert,  v,  V) v->index = v_COUNT;
+  for_list(vert,  v,  V) v->ID = v_COUNT;
 
   for(vert *v:V) {
-    inputs(v->index)=v->inLinks.N;
-    if(!inputs(v->index)) noInputs.append(v);
+    inputs(v->ID)=v->numInputs(); //inLinks.N;
+    if(!inputs(v->ID)) fringe.append(v);
   }
 
-  while(noInputs.N) {
-    v=noInputs.popFirst();
+  while(fringe.N) {
+    v=fringe.popFirst();
     order.append(v);
 
-    for_list(edge,  e,  v->outLinks) {
-      inputs(e->to->index)--;
-      if(!inputs(e->to->index)) noInputs.append(e->to);
+    for(vert* to : v->outLinks) {
+      inputs(to->ID)--;
+      if(!inputs(to->ID)) fringe.append(to);
     }
   }
 

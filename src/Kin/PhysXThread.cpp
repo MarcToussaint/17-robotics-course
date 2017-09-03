@@ -19,16 +19,18 @@ struct PhysXThread : Thread{
   }
 
   void open(){
+#if 0
     physxWorld.writeAccess();
     physxWorld() = modelWorld.get();
     for(uint i=physxWorld().joints.N;i--;){
       mlr::Joint *j = physxWorld().joints.elem(i);
       if(j->type==mlr::JT_rigid){
-        LOG(0) <<"removing fixed joint '" <<j->tag() <<"' (assuming it is not articulated)";
+        LOG(0) <<"removing fixed joint '" <<j->type <<':' <<j->from->name <<'-' <<j->to->name <<"' (assuming it is not articulated)";
         delete j;
       }
     }
     physxWorld.deAccess();
+#endif
     px = new PhysXInterface(physxWorld.set());
     px->setArticulatedBodiesKinematic();
     view = new OrsViewer("physxWorld", .1);

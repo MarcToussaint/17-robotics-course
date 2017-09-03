@@ -244,11 +244,13 @@ void glStandardLight(void*) {
 }
 
 void glStandardScene(void*) {
+  glPushAttrib(GL_CURRENT_BIT);
   glStandardLight(NULL);
   //  glDrawFloor(10, .8, .8, .8);
   //  glDrawFloor(10, 1.5, 0.83, .0);
   glDrawFloor(10., 108./255., 123./255., 139./255.);
   glDrawAxes(.1);
+  glPopAttrib();
 }
 
 void glColor(int col) {
@@ -1135,6 +1137,21 @@ void OpenGL::addView(uint v, void (*call)(void*), void* classP) {
   dataLock.unlock();
 }
 
+void OpenGL::addSubView(uint v, GLDrawer &c){
+  dataLock.writeLock();
+  if(v>=views.N) views.resizeCopy(v+1);
+  views(v).drawers.append(&c);
+  dataLock.unlock();
+}
+
+void OpenGL::setSubViewTiles(uint cols, uint rows){
+  for(uint i=0;i<views.N;i++){
+    double x=i%cols;
+    double y=rows - 1 - i/cols;
+    setViewPort(i, x/cols, (x+1)/cols, y/rows, (y+1)/rows);
+  }
+}
+
 void OpenGL::setViewPort(uint v, double l, double r, double b, double t) {
   dataLock.writeLock();
   if(v>=views.N) views.resizeCopy(v+1);
@@ -1282,7 +1299,7 @@ void OpenGL::Draw(int w, int h, mlr::Camera *cam, bool callerHasAlreadyLocked) {
   //draw subviews
   for(uint v=0; v<views.N; v++) {
     GLView *vi=&views(v);
-    glViewport(vi->le*w, vi->bo*h, (vi->ri-vi->le)*w, (vi->to-vi->bo)*h);
+    glViewport(vi->le*w, vi->bo*h, (vi->ri-vi->le)*w+1, (vi->to-vi->bo)*h+1);
     //glMatrixMode(GL_MODELVIEW);
     //glLoadIdentity();
     glMatrixMode(GL_PROJECTION);
@@ -1341,6 +1358,8 @@ void OpenGL::Draw(int w, int h, mlr::Camera *cam, bool callerHasAlreadyLocked) {
 }
 
 void OpenGL::Select(bool callerHasAlreadyLocked) {
+  if(reportEvents){ LOG(0) <<MLR_HERE <<" Select entry"; }
+
   if(!callerHasAlreadyLocked){
     singleGLAccess.mutex.lock();
     dataLock.readLock();
@@ -1366,7 +1385,7 @@ void OpenGL::Select(bool callerHasAlreadyLocked) {
     camera.glSetProjectionMatrix();
   } else {
     GLView *vi=&views(mouseView);
-    GLint viewport[4] = { (GLint)vi->le*w, (GLint)vi->bo*h, (GLint)(vi->ri-vi->le)*w, (GLint)(vi->to-vi->bo)*h};
+    GLint viewport[4] = { (GLint)(vi->le*w), (GLint)(vi->bo*h), (GLint)((vi->ri-vi->le)*w), (GLint)((vi->to-vi->bo)*h)};
     gluPickMatrix((GLdouble)mouseposx, (GLdouble)mouseposy, 2., 2., viewport);
     vi->camera.glSetProjectionMatrix();
   }
@@ -1428,6 +1447,7 @@ void OpenGL::Select(bool callerHasAlreadyLocked) {
     dataLock.unlock();
     singleGLAccess.mutex.unlock();
   }
+  if(reportEvents){ LOG(0) <<MLR_HERE <<" Select done"; }
 }
 
 /** @brief watch in interactive mode and wait for an exiting event
@@ -1660,16 +1680,26 @@ void OpenGL::Mouse(int button, int downPressed, int _x, int _y) {
   if(mouse_button==5 && !downPressed) cam->X.pos -= s->downRot*Vector_z * (.1 * (s->downPos-s->downFoc).length());
 
   if(mouse_button==3) {  //selection
+#if 1
+    captureDepth.resize(h, w);
+    glReadPixels(0, 0, w, h, GL_DEPTH_COMPONENT, GL_FLOAT, captureDepth.p);
+    double d = captureDepth(mouseposy, mouseposx);
+    if(d<.01 || d>.9999){
+      cout <<"NO SELECTION: SELECTION DEPTH = " <<d <<' ' <<camera.glConvertToTrueDepth(d) <<endl;
+    }else{
+      double x=mouseposx, y=mouseposy;
+      unproject(x, y, d, true);
+      cam->focus(x, y, d);
+    }
+#else
     {
       auto sgl = singleGLAccess();
       Select(true);
     }
-//    singleGLAccess()->unlock();
     if(topSelection){
       cam->focus(topSelection->x, topSelection->y, topSelection->z);
-//      uint name=topSelection->name;
-//      cout <<"RIGHT CLICK call: id = 0x" <<std::hex <<topSelection->name <<endl;
     }
+#endif
   }
 
   //step through all callbacks
@@ -2042,5 +2072,6 @@ bool glUI::checkMouse(int _x, int _y) {
 #  include"opengl_Cygwin.moccpp"
 #endif
 #endif
+
 
 

@@ -13,6 +13,7 @@
     --------------------------------------------------------------  */
 
 #include "taskMap_proxy.h"
+#include <Kin/proxy.h>
 
 TaskMap_Proxy::TaskMap_Proxy(PTMtype _type,
                            uintA _shapes,
@@ -32,7 +33,7 @@ void TaskMap_Proxy::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
   shapes_t.referTo(shapes);
 
   y.resize(1).setZero();
-  if(&J) J.resize(1, G.getJointStateDimension(false)).setZero();
+  if(&J) J.resize(1, G.getJointStateDimension()).setZero();
 
   switch(type) {
     case allPTMT:

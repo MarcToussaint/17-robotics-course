@@ -13,15 +13,24 @@
     --------------------------------------------------------------  */
 
 #include "taskMaps.h"
+#include "proxy.h"
+#include "frame.h"
 
 //===========================================================================
 
 void CollisionConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
-  G.kinematicsProxyCost(y, J, margin, false);
+  G.kinematicsProxyCost(y, J, margin, true);
   y -= .5;
 }
 
 //===========================================================================
+
+
+PairCollisionConstraint::PairCollisionConstraint(const mlr::KinematicWorld &G, const char *iShapeName, const char *jShapeName, double _margin)
+  : i(G.getFrameByName(iShapeName)->ID),
+    j(G.getFrameByName(jShapeName)->ID),
+    margin(_margin) {
+}
 
 void PairCollisionConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
   if(t>=0 && referenceIds.N){
@@ -72,9 +81,12 @@ void PairCollisionConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, 
 
 //===========================================================================
 
+PlaneConstraint::PlaneConstraint(const mlr::KinematicWorld &G, const char *iShapeName, const arr &_planeParams)
+  : i(G.getFrameByName(iShapeName)->ID), planeParams(_planeParams){}
+
 void PlaneConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
-  mlr::Body *body_i = G.shapes(i)->body;
-  mlr::Vector vec_i = G.shapes(i)->rel.pos;
+  mlr::Frame *body_i = G.frames(i);
+  mlr::Vector vec_i = 0;
 
   arr y_eff, J_eff;
   G.kinematicsPos(y_eff, (&J?J_eff:NoArr), body_i, vec_i);
@@ -98,10 +110,10 @@ void ConstraintStickiness::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int
 //===========================================================================
 
 void PointEqualityConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
-  mlr::Vector vec_i = i<0?ivec: G.shapes(i)->rel*ivec;
-  mlr::Vector vec_j = j<0?jvec: G.shapes(j)->rel*jvec;
-  mlr::Body *body_i = i<0?NULL: G.shapes(i)->body;
-  mlr::Body *body_j = j<0?NULL: G.shapes(j)->body;
+  mlr::Vector vec_i = ivec;
+  mlr::Vector vec_j = jvec;
+  mlr::Frame *body_i = i<0?NULL: G.frames(i);
+  mlr::Frame *body_j = j<0?NULL: G.frames(j);
   mlr::Vector pi = body_i ? body_i->X * vec_i : vec_i;
   mlr::Vector pj = body_j ? body_j->X * vec_j : vec_j;
   y = conv_vec2arr(pi-pj);
@@ -118,6 +130,12 @@ void PointEqualityConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, 
 }
 
 //===========================================================================
+
+ContactEqualityConstraint::ContactEqualityConstraint(const mlr::KinematicWorld &G, const char *iShapeName, const char *jShapeName, double _margin)
+  : i(G.getFrameByName(iShapeName)->ID),
+    j(G.getFrameByName(jShapeName)->ID),
+    margin(_margin) {
+}
 
 void ContactEqualityConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G, int t){
   y.resize(1) = 0.;
@@ -136,10 +154,10 @@ void ContactEqualityConstraint::phi(arr& y, arr& J, const mlr::KinematicWorld& G
 VelAlignConstraint::VelAlignConstraint(const mlr::KinematicWorld& G,
                    const char* iShapeName, const mlr::Vector& _ivec,
                    const char* jShapeName, const mlr::Vector& _jvec, double _target) {
-  mlr::Shape *a = iShapeName ? G.getShapeByName(iShapeName):NULL;
-  mlr::Shape *b = jShapeName ? G.getShapeByName(jShapeName):NULL;
-  if(a) i=a->index;
-  if(b) j=b->index;
+  mlr::Frame *a = iShapeName ? G.getFrameByName(iShapeName):NULL;
+  mlr::Frame *b = jShapeName ? G.getFrameByName(jShapeName):NULL;
+  if(a) i=a->ID;
+  if(b) j=b->ID;
   if(&_ivec) ivec=_ivec; else ivec.setZero();
   if(&_jvec) jvec=_jvec; else jvec.setZero();
   order = 1;
@@ -151,7 +169,7 @@ void VelAlignConstraint::phi(arr& y, arr& J, const WorldL& G, double tau, int t)
 
   // compute body j orientation
   arr y_j,J_j,J_bar_j;
-  G(G.N-1)->kinematicsVec(y_j, (&J?J_bar_j:NoArr), G(G.N-1)->shapes(j)->body, jvec);
+  G(G.N-1)->kinematicsVec(y_j, (&J?J_bar_j:NoArr), G(G.N-1)->frames(j), jvec);
 
   if(&J){
     J_j = zeros(G.N, y_j.N, J_bar_j.d1);
@@ -167,7 +185,7 @@ void VelAlignConstraint::phi(arr& y, arr& J, const WorldL& G, double tau, int t)
   J_bar.resize(k+1);
 
   for(uint c=0;c<=k;c++) {
-    G(G.N-1-c)->kinematicsPos(y_bar(c), (&J?J_bar(c):NoArr), G(G.N-1-c)->shapes(i)->body, ivec);
+    G(G.N-1-c)->kinematicsPos(y_bar(c), (&J?J_bar(c):NoArr), G(G.N-1-c)->frames(i), ivec);
   }
 
   arr dy_i, dJ_i;

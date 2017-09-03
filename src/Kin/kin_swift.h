@@ -40,16 +40,15 @@ struct SwiftInterface {
   void pushToSwift(const mlr::KinematicWorld& world);
   void pullFromSwift(mlr::KinematicWorld& world, bool dumpReport);
 
-  void reinitShape(const mlr::Shape *s);
+  void reinitShape(const mlr::Frame *s);
 //  void close();
-  void activate(mlr::Shape *s);
-  void deactivate(mlr::Shape *s);
-  void activate(mlr::Shape *s1, mlr::Shape *s2);
-  void deactivate(mlr::Shape *s1, mlr::Shape *s2);
-  void deactivate(const mlr::Array<mlr::Shape*>& shapes);
-  void deactivate(const mlr::Array<mlr::Body*>& bodies);
+  void activate(mlr::Frame *s);
+  void deactivate(mlr::Frame *s);
+  void activate(mlr::Frame *s1, mlr::Frame *s2);
+  void deactivate(mlr::Frame *s1, mlr::Frame *s2);
+  void deactivate(const mlr::Array<mlr::Frame*>& bodies);
 
-  void initActivations(const mlr::KinematicWorld& world, uint parentLevelsToDeactivate=3);
+  void initActivations(const mlr::KinematicWorld& world, uint parentLevelsToDeactivate=1);
   void swiftQueryExactDistance();
 };
 /** @} */

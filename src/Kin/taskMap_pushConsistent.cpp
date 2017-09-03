@@ -1,4 +1,5 @@
 #include "taskMap_pushConsistent.h"
+#include "frame.h"
 
 TaskMap_PushConsistent::TaskMap_PushConsistent(int iShape, int jShape) : i(iShape), j(jShape){
   order=1;
@@ -6,10 +7,10 @@ TaskMap_PushConsistent::TaskMap_PushConsistent(int iShape, int jShape) : i(iShap
 
 TaskMap_PushConsistent::TaskMap_PushConsistent(const mlr::KinematicWorld &G,
                                                const char* iShapeName, const char* jShapeName) : i(-1), j(-1){
-  mlr::Shape *a = iShapeName ? G.getShapeByName(iShapeName):NULL;
-  mlr::Shape *b = jShapeName ? G.getShapeByName(jShapeName):NULL;
-  if(a) i=a->index;
-  if(b) j=b->index;
+  mlr::Frame *a = iShapeName ? G.getFrameByName(iShapeName):NULL;
+  mlr::Frame *b = jShapeName ? G.getFrameByName(jShapeName):NULL;
+  if(a) i=a->ID;
+  if(b) j=b->ID;
   order=1;
 }
 
@@ -28,9 +29,9 @@ void TaskMap_PushConsistent::phi(arr& y, arr& J, const WorldL& G, double tau, in
   const mlr::KinematicWorld& G2 = *G.elem(-1);
   const mlr::KinematicWorld& G1 = *G.elem(-2);
 
-  mlr::Body *body_i1 = G1.shapes(i)->body;
-  mlr::Body *body_i2 = G2.shapes(i)->body;
-  mlr::Body *body_j2 = G2.shapes(j)->body;
+  mlr::Frame *body_i1 = G1.frames(i);
+  mlr::Frame *body_i2 = G2.frames(i);
+  mlr::Frame *body_j2 = G2.frames(j);
 
   arr yi1, yi2, yj2, Ji1, Ji2, Jj2;
   G1.kinematicsPos(yi1, Ji1, body_i1);
@@ -67,4 +68,8 @@ void TaskMap_PushConsistent::phi(arr& y, arr& J, const WorldL& G, double tau, in
     J.setMatrixBlock(J2, 0, qidx-J2.d1);
   }
 #endif
+}
+
+mlr::String TaskMap_PushConsistent::shortTag(const mlr::KinematicWorld &G){
+  return STRING("PushConsistent:"<<(i<0?"WORLD":G.frames(i)->name) <<':' <<(j<0?"WORLD":G.frames(j)->name));
 }
