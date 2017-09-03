@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <Kin/roboticsCourse.h>
 #include <Gui/opengl.h>
 
 void drawEnv(void*);
@@ -54,7 +53,6 @@ struct CartPoleState{
 };
 
 void glDrawCartPole(void *classP){
-#ifdef MLR_GL //FIXME: this should really use our GL abstraction, should it not?
   CartPoleState *s=(CartPoleState*)classP;
   double GLmatrix[16];
   mlr::Transformation f;
@@ -73,7 +71,6 @@ void glDrawCartPole(void *classP){
   glColor(.2,.2,.2);
   glDrawBox(.1, .1, 1.);
   glLoadIdentity();
-#endif
 }
 
 void testDraw(){
@@ -81,20 +78,20 @@ void testDraw(){
   s.gl.watch();
 }
 
-void testMove(){
+void playController(const arr& w, bool noise){
   CartPoleState s;
-  for (uint t=0; t<400000; t++){
-    s.step(0.0);
+  if(noise)  s.dynamicsNoise = 0.1;
+  for(uint t=0;;t++){
+    double u = w(0)*s.x + w(1)*s.x1 + w(2)*s.th + w(3)*s.th1;
+    s.step(u);
     s.gl.text.clear() <<t <<" ; " <<s.x1 << " ; " <<s.th1;
     s.gl.update();
   }
 }
 
 
-
 int main(int argc,char **argv){
   //testDraw();
-  testMove();
-  
+  playController({0.,0.,0.,0.}, true);
   return 0;
 }

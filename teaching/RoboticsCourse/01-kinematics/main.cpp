@@ -1,5 +1,4 @@
-#include <Kin/roboticsCourse.h>
-
+#include <Kin/kin.h>
 
 void simpleArrayOperations(){
 
@@ -37,52 +36,51 @@ void simpleArrayOperations(){
 
 
 void openingSimulator(){
-  Simulator S("man.ors");
-  cout <<"joint dimensions = " <<S.getJointDimension() <<endl;
+  mlr::KinematicWorld K("man.ors");
+  cout <<"joint dimensions = " <<K.getJointStateDimension() <<endl;
 
   cout <<"initial posture (hit ENTER in the OpenGL window to continue!!)" <<endl;
-  S.watch();        //pause and watch initial posture
+  K.watch(true);        //pause and watch initial posture
 
   arr q;
-  S.getJointAngles(q);
+  K.getJointState(q);
 
   q(0) += 0.1;                 //change the first entry of q-vector
-  S.setJointAngles(q);
-  S.watch();
+  K.getJointState(q);
+  K.watch(true);
   
   q = 0.;                      //set q-vector equal zero
-  S.setJointAngles(q);
-  S.watch();
+  K.getJointState(q);
+  K.watch(true);
 }
 
 
 void reach(){
-  Simulator S("man.ors");
+  mlr::KinematicWorld K("man.ors");
   arr q,W;
-  uint n = S.getJointDimension();
-  S.getJointAngles(q);
+  uint n = K.getJointStateDimension();
+  K.getJointState(q);
   double w = mlr::getParameter("w",1e-4);
   W.setDiag(w,n);  //W is equal the Id_n matrix times scalar w
 
   cout <<"initial posture (hit ENTER in the OpenGL window to continue!!)" <<endl;
-  S.watch();        //pause and watch initial posture
+  K.watch(true);        //pause and watch initial posture
 
   arr y_target,y,J;
   for(uint i=0;i<10;i++){
     //1st task:
     y_target = {-0.2, -0.4, 1.1}; 
-    S.kinematicsPos(y,"handR");  //"handR" is the name of the right hand ("handL" for the left hand)
-    S.jacobianPos  (J,"handR");
+    K.kinematicsPos(y, J, K.getBodyByName("handR"));  //"handR" is the name of the right hand ("handL" for the left hand)
 
     //compute joint updates
     q += inverse(~J*J + W)*~J*(y_target - y); 
     //NOTATION: ~J is the transpose of J
     
     //sets joint angles AND computes all frames AND updates display
-    S.setJointAngles(q);
+    K.setJointState(q);
 
     //optional: pause and watch OpenGL
-    S.watch();
+    K.watch(true);
   }
 }
 
@@ -94,8 +92,6 @@ int main(int argc,char **argv){
   case 0:  simpleArrayOperations();  break;
   case 1:  openingSimulator();  break;
   case 2:  reach();  break;
-//  case 3:  circle();  break;
-//  case 4:  multiTask();  break;
   }
 
   return 0;

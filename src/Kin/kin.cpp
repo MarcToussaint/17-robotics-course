@@ -2015,18 +2015,18 @@ void mlr::KinematicWorld::stepOde(double tau){
 void mlr::KinematicWorld::stepDynamics(const arr& Bu_control, double tau, double dynamicNoise, bool gravity){
 
   struct DiffEqn:VectorFunction{
-    mlr::KinematicWorld &S;
+    mlr::KinematicWorld &K;
     const arr& Bu;
     bool gravity;
-    DiffEqn(mlr::KinematicWorld& _S, const arr& _Bu, bool _gravity):S(_S), Bu(_Bu), gravity(_gravity){
+    DiffEqn(mlr::KinematicWorld& _K, const arr& _Bu, bool _gravity):K(_K), Bu(_Bu), gravity(_gravity){
       VectorFunction::operator=( [this](arr& y, arr& J, const arr& x) -> void {
         this->fv(y, J, x);
       } );
     }
     void fv(arr& y, arr& J, const arr& x){
-      S.setJointState(x[0], x[1]);
+      K.setJointState(x[0], x[1]);
       arr M,Minv,F;
-      S.equationOfMotion(M, F, gravity);
+      K.equationOfMotion(M, F, gravity);
       inverse_SymPosDef(Minv, M);
       //Minv = inverse(M); //TODO why does symPosDef fail?
       y = Minv * (Bu - F);
