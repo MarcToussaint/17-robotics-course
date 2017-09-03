@@ -70,7 +70,7 @@ void reach(){
   for(uint i=0;i<10;i++){
     //1st task:
     y_target = {-0.2, -0.4, 1.1}; 
-    K.kinematicsPos(y, J, K.getBodyByName("handR"));  //"handR" is the name of the right hand ("handL" for the left hand)
+    K.kinematicsPos(y, J, K.getFrameByName("handR"));  //"handR" is the name of the right hand ("handL" for the left hand)
 
     //compute joint updates
     q += inverse(~J*J + W)*~J*(y_target - y); 
