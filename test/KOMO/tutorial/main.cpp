@@ -29,11 +29,11 @@ void tutorialBasics(){
 
   //-- simple tasks, called low-level
 
-  //in phase-time [1,\infty] position-difference between "endeff" and "target" shall be zero (sumOfSqr objective)
-  komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "endeff", NoVector, "target", NoVector));
+  //in phase-time [1,\infty] position-difference between "baxterR" and "target" shall be zero (sumOfSqr objective)
+  komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
 
-  //in phase-time [1,\infty] quaternion-difference between "endeff" and "target" shall be zero (sumOfSqr objective)
-  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "endeff", NoVector,
+  //in phase-time [1,\infty] quaternion-difference between "baxterR" and "target" shall be zero (sumOfSqr objective)
+  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector,
                                             "target", NoVector));
   //I don't recomment setting quaternion tasks! This is only for testing here. Instead, use alignment tasks as in test/KOMO/komo
 
@@ -42,6 +42,7 @@ void tutorialBasics(){
 
   //-- call the optimizer
   komo.reset();
+  komo.reportProblem(); //display some info on the problem
   komo.run();
   //  komo.checkGradients(); //this checks all gradients of the problem by finite difference
   komo.getReport(true); //true -> plot the cost curves
@@ -60,7 +61,7 @@ void tutorialBasics(){
    *
    * order=0 means that the task is about the position(absolute value) in task space
    * order=1 means that the task is about the velocity in task space
-   * order=0 means that the task is about the acceleration in task space
+   * order=2 means that the task is about the acceleration in task space
    *
    * For instance, setSquaredQAccelerations sets a tasks about the acceleration in the identity map
    *
@@ -90,8 +91,8 @@ void tutorialInverseKinematics(){
   komo.setSquaredQuaternionNorms(-1., -1., 1e3); //when the kinematics includes quaternion joints, keep them roughly regularized
 
   //-- simple tasks, called low-level
-  komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "endeff", NoVector, "target", NoVector));
-  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "endeff", NoVector,
+  komo.setTask(1., -1., new TaskMap_Default(posDiffTMT, komo.world, "baxterR", NoVector, "target", NoVector));
+  komo.setTask(1., -1., new TaskMap_Default(quatDiffTMT, komo.world, "baxterR", NoVector,
                                             "target", NoVector));
 
   //-- call the optimizer

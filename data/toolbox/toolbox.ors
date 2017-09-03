@@ -1,0 +1,16 @@
+body /toolbox/handle { X=<T t(.0 .0 .12)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/side_front { X=<T d(-90 0 0 1) t(0 -.212 .12)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/side_back { X=<T d(90 0 0 1) t(0. -.212 .12)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/side_left { X=<T t(.0 -.147 .12)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/side_right { X=<T d(180 0 0 1) t(.0 -.147 .12)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/floor_left { X=<T t(.0 .069 .004) d(90 1 0 0)> type=5 size=[ .1 0 .10 0 ] }
+body /toolbox/floor_right { X=<T d(180 0 0 1) t(.0 .069 .004) d(90 1 0 0)> type=5 size=[ .1 0 .10 0 ] }
+
+shape sh/toolbox/handle (/toolbox/handle){ type=3 mesh='ToolboxPart1.stl' meshscale=.001 rel=<T t(0 .0085 -.06) d(90 1 0 0) > color=[1. .6 .3] contact }
+shape sh/toolbox/side_front (/toolbox/side_front){ type=3 mesh='ToolboxPart2.stl' meshscale=.001 rel=<T t(-.03 .0 .0) d(-90 1 0 0)> color=[1. .7 .3] contact }
+shape sh/toolbox/side_back (/toolbox/side_back){ type=3 mesh='ToolboxPart2.stl' meshscale=.001 rel=<T t(-.03 .0 .0) d(-90 1 0 0)> color=[1. .7 .3] contact }
+shape sh/toolbox/side_left (/toolbox/side_left){ type=3 mesh='ToolboxPart3.stl' meshscale=.001 rel=<T d(-90 1 0 0)> color=[1. .6 .3] contact }
+shape sh/toolbox/side_right (/toolbox/side_right){ type=3 mesh='ToolboxPart3.stl' meshscale=.001 rel=<T d(-90 1 0 0)> color=[1. .6 .3] contact }
+shape sh/toolbox/floor_left (/toolbox/floor_left){ type=3 mesh='ToolboxPart4.stl' meshscale=.001 rel=<T d(-90 1 0 0)> color=[1. .8 .3] contact }
+shape sh/toolbox/floor_right (/toolbox/floor_right){ type=3 mesh='ToolboxPart4.stl' meshscale=.001 rel=<T d(-90 1 0 0)> color=[1. .8 .3] contact }
+

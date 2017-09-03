@@ -1,0 +1,62 @@
+Include = 'baxter-clean.ors'
+#Include = '../lockboxNew.ors'
+
+Delete shape visual
+#Delete shape collision
+
+#Delete shape collision (head)
+
+#shape (head){ type=3 size=[1 1 1 1] rel=<T -0.0319886 -2.26154e-05 -0.00274816 -0.707107 0 -0.707107 0 >  mesh='meshes/head/H0.STL'  color=[ 0.2 0.2 0.2 1 ]  rel_includes_mesh_center,  }
+#shape (head){ type=0 size=[0.218 0.16 0.001 0] rel=<T -0.0157421 1.40048e-14 -0.119839 0.154854 -0.689942 -0.689942 0.154854 >  color=[ 0 0 0 1 ]  }
+#shape (head){ type=3 size=[1 1 1 1] rel=<T -0.0055038 -0.000139031 -0.0938075 -0.453099 -0.453099 -0.542864 0.542864 >  mesh='meshes/head/H1.STL'  color=[ 0.5 0.1 0.1 1 ]  rel_includes_mesh_center,  }
+
+shape (head){ type=0 size=[0.27 0.19 0.03 0] rel=<T -0.0157421 0 -0.119839 0.154854 -0.689942 -0.689942 0.154854 >  color=[ 1 0 0 ]  }
+
+## zero position
+
+Edit right_s0 { q= 0.08 }
+Edit left_s0 { q=-0.08 }
+Edit right_s1 { q=-1 }
+Edit left_s1 { q=-1 }
+Edit right_e0 { q= 1.17 }
+Edit left_e0 { q=-1.17 }
+Edit right_e1 { q=1.94 }
+Edit left_e1 { q=1.94 }
+Edit right_w0 { q=-0.67 }
+Edit left_w0 { q=0.67 }
+Edit right_w1 {q=1.02 }
+Edit left_w1 { q=1.02 }
+Edit right_w2 { q=0.5 }
+Edit left_w2 { q=-0.5 }
+
+
+## extra shapes to mimick pr2
+
+body base_footprint { mass=100 }
+shape base_footprint(base_footprint) { type=5 size=[.1 0 0 0] } #marker
+joint (base_footprint base){ type=10 A=<T t(0 0 1)> }
+shape torso_lift_link_0 (base) { type=5 size=[.3 .3 .3 0] }
+
+## extra shapes
+#shape endeffBase(torso_lift_link){ rel=<T d(90 0 1 0) t(.2 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape endeffHead(head){ rel=<T  d(-90 0 0 1) d(-15 1 0 0)> type=5 color=[1 0 0] size=[.2 0 0 0]}
+#shape endeffWorkspace(torso_lift_link){ rel=<T d(90 0 1 0) t(.7 0 -.1) d(-90 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0] }
+
+shape endeffL(left_wrist){ rel=<T t(.08 0 0)> type=5 color=[1 0 0] size=[.2 0 0 0] }
+shape endeffR(right_wrist){ rel=<T t(.08 0 0)> type=5 color=[1 0 0] size=[.2 0 0 0] }
+
+shape elbowL(left_lower_shoulder){ rel=<T d(180 1 0 0) t(0 0 .42)> type=5 color=[1 0 0] size=[.2 0 0 0]}
+shape elbowR(right_lower_shoulder){ rel=<T d(180 1 0 0) t(0 0 .42)> type=5 color=[1 0 0] size=[.2 0 0 0]}
+
+shape wristR(right_upper_forearm){ rel=<T d(180 1 0 0) t(0 0 .0)> type=5 color=[1 0 0] size=[.4 0 0 0]}
+shape wristL(left_upper_forearm){ rel=<T d(180 1 0 0) t(0 0 .0)> type=5 color=[1 0 0] size=[.4 0 0 0]}
+
+#body table{ type=0, X=<T t(.7 0 .8)>, size=[1. 1. .04 .0], color=[.8 .5 .3] fixed, contact }
+#shape leg1(table) { rel=<T t(-.3 -.3 -.3)>  type=0  size=[.04 .04 .6 0] color=[0.5 0.3 0.15] }
+#shape leg2(table) { rel=<T t(-.3 .3 -.3)>  type=0 size=[.04 .04 .6 0] color=[0.5 0.3 0.15] }
+#shape leg3(table) { rel=<T t(.3 .3 -.3)>  type=0 size=[.04 .04 .6 0] color=[0.5 0.3 0.15] }
+#shape leg4(table) { rel=<T t(.3 -.3 -.3)>  type=0 size=[.04 .04 .6 0] color=[0.5 0.3 0.15] }
+
+#body obj1 { size=[.06 .06 .1 .02] type=9 contact }
+#joint (table obj1) { from=<T t(-.2 .2 0)> to=<T t(0 0 .1)> type=10 }
+#shape shape1 (obj1) { type=5 rel=<T t(0 0 .1)> size=[.4 0 0 0] }

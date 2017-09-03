@@ -1,0 +1,2 @@
+body screwdriver {}
+shape screwdriver(screwdriver) { type=3 mesh='screwdriver.off' }
