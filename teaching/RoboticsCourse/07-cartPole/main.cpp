@@ -4,12 +4,13 @@
 void drawEnv(void*);
 void glDrawCartPole(void *classP);
 
-struct CartPoleState{
+struct CartPole{
   double x,x1,th,th1;
   double tau,x2,the2;
   double c1,c2,Mp,Mc,l,g, dynamicsNoise;
   OpenGL gl;
-  CartPoleState(){
+
+  CartPole(){
     x=0.;
     x1=0.;
     th=.2; //slighly non-upright //MLR_PI; //haning down
@@ -53,7 +54,7 @@ struct CartPoleState{
 };
 
 void glDrawCartPole(void *classP){
-  CartPoleState *s=(CartPoleState*)classP;
+  CartPole *s=(CartPole*)classP;
   double GLmatrix[16];
   mlr::Transformation f;
   f.setZero();
@@ -74,18 +75,18 @@ void glDrawCartPole(void *classP){
 }
 
 void testDraw(){
-  CartPoleState s;
-  s.gl.watch();
+  CartPole C;
+  C.gl.watch();
 }
 
 void playController(const arr& w, bool noise){
-  CartPoleState s;
-  if(noise)  s.dynamicsNoise = 0.1;
+  CartPole C;
+  if(noise)  C.dynamicsNoise = 0.1;
   for(uint t=0;;t++){
-    double u = w(0)*s.x + w(1)*s.x1 + w(2)*s.th + w(3)*s.th1;
-    s.step(u);
-    s.gl.text.clear() <<t <<" ; " <<s.x1 << " ; " <<s.th1;
-    s.gl.update();
+    double u = w(0)*C.x + w(1)*C.x1 + w(2)*C.th + w(3)*C.th1;
+    C.step(u);
+    C.gl.text.clear() <<t <<" ; " <<C.x1 << " ; " <<C.th1;
+    C.gl.update();
   }
 }
 
