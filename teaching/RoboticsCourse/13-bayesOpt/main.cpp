@@ -12,7 +12,7 @@ double f(const arr& x){
 int main(int argc,char **argv){
   rnd.clockSeed(); //random seed rng
 
-  //display the function
+  //display the function: evaluate it over a grid
   arr X = grid(1, -2., 2., 100);
   arr f_y(X.d0);
   for(uint i=0;i<X.d0;i++) f_y(i) = f(X[i]);
@@ -22,19 +22,24 @@ int main(int argc,char **argv){
   plot(false);
   mlr::wait();
 
-  //Iterate taking samplings and updating a GP
+  //iterate taking samplings and updating a GP
   uint T=20;
   arr data_X, data_y;
   for(uint t=0;t<T;t++){
-    //a random decision:
+    //a random decision
     arr x = -2. + 4.*rand(1);
+
+    /* Tip to implement a better strategy:
+     * -- generate a grid X (maybe use the one we already have)
+     * -- compute some acquisition function alpha(i) over the grid
+     * -- pick x = X[argmax(alpha)]  (the column in X with index argmax_i \alpha(x_i) )
+     */
 
     //query the function
     double y = f(x);
 
     //augment the data
-    data_X.append(x);
-    data_X.reshape(t+1, x.N);
+    data_X.append(~x);
     data_y.append(y);
 
     //compute a GP
